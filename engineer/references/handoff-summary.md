@@ -36,6 +36,14 @@ panel_findings:                      # required when a review panel ran (CP2/CP4
     location: <file:line, or file>
     accepted: <yes | no>
     disposition: <what was done, or why it was rejected>
+gauntlet_rounds:                     # required when a gauntlet loop ran (CP5)
+  - round: <n>
+    bar: <the reference this round was graded against>
+    verdict: <ties-or-wins | loses>
+    gap: <one line, falsifiable — omit on ties-or-wins>
+    location: <file:line, or the captured region>
+    action: <what the builder changed to close it>
+    stopped_by: <clear | cap | no-progress | regression>   # last round only
 findings_summary: <one line>          # optional
 human_action_needed: <yes | no>
 human_action_kind: <review | decision | approval | none>   # optional
@@ -71,6 +79,7 @@ What state was written. Optional section.
 - **Required frontmatter:** `skill`, `agent_id`, `started`, `ended`, `artifacts`, `human_action_needed`, `recommended_next`, `status`
 - **Required on checkpoint-advancing skills:** `checkpoint`, `exit_criteria` — required when `checkpoint` is set; both omitted for off-pipeline skills (`checkpoint: null`).
 - **Required when a review panel ran:** `panel_findings` — on `discover-acs` (CP2) and `plan` (CP4) whenever the panel was dispatched. Record **every** finding, accepted or rejected; an undocumented rejection means the next agent re-litigates it. See `${CLAUDE_PLUGIN_ROOT}/references/review-panel.md`.
+- **Required when a gauntlet loop ran:** `gauntlet_rounds` — on the CP5 handoff whenever the feature declared a `gauntlet:` bar. Record **every** round, including the ones whose gap was rejected. See `${CLAUDE_PLUGIN_ROOT}/references/gauntlet.md`.
 - **Optional frontmatter:** `agent_role`, `findings_summary`, `human_action_kind`, `tracker_update`, `cloud_session_url`
 - **Required body:** What I did, Artifacts produced, Human action needed?, Recommended next step
 - **Optional body:** Findings, Tracker update
@@ -82,6 +91,7 @@ What state was written. Optional section.
 - `agent_id` enforces verification independence (Principle 7): a verification handoff's `agent_id` must differ from the implementer's for the same feature. Enforced by `dae_handoff.py gate()` — any CP6/CP7/CP8 handoff whose `agent_id` equals the feature's CP5 handoff `agent_id` fails the gate with a "Principle 7" error. If the verify subagent crashes, the implementer MUST NOT self-verify — re-dispatch a fresh subagent or pause for the human.
 - `exit_criteria[*].met` accepts `true`, `false`, or `partial`. `partial` counts as **not met** for the gate but is preserved distinctly in reports so the human can see the criterion was *attempted* but didn't fully satisfy. Never auto-promote `partial` to `true` to move forward.
 - An **unaddressed `error`-severity `panel_findings` entry blocks the checkpoint** at autonomy `medium`/`high`: set `human_action_needed: yes` and do not dispatch the next checkpoint. "Addressed" is `accepted: yes` with the artifact edited, or `accepted: no` with a disposition — silence is not addressing it. Advisory at autonomy `low`.
+- A gauntlet loop that stopped on `cap`, `no-progress` or `regression` sets `human_action_needed: yes` (`human_action_kind: review`) and names the open gap in `findings_summary`. A loop that stopped on `clear` needs no human action.
 - Writing the summary triggers `progress-log`, which propagates it to `progress.md` and the tracker.
 - **Ontology gate.** Before writing the handoff, run
   `${CLAUDE_PLUGIN_ROOT}/scripts/dae_ontology.py <feature-dir>`. It checks the

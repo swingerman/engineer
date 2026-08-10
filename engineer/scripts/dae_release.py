@@ -63,8 +63,12 @@ def find_source(plugin, marketplaces=MARKETPLACES):
     if not os.path.isdir(marketplaces):
         raise ReleaseError("no marketplaces dir: %s" % marketplaces)
     for mk in sorted(os.listdir(marketplaces)):
-        cand = os.path.join(marketplaces, mk, plugin, ".claude-plugin", "plugin.json")
-        if os.path.isfile(cand):
+        # <mk>/<plugin>/ is the common layout; <mk>/ itself is a plugin whose
+        # marketplace entry has source "./" (atdd).
+        for cand in (os.path.join(marketplaces, mk, plugin, ".claude-plugin", "plugin.json"),
+                     os.path.join(marketplaces, mk, ".claude-plugin", "plugin.json")):
+            if not os.path.isfile(cand):
+                continue
             with open(cand, encoding="utf-8") as f:
                 meta = json.load(f)
             if meta.get("name") == plugin:

@@ -195,6 +195,18 @@ class TestMarketplaceSync(unittest.TestCase):
         self.assertFalse(res["marketplace_synced"])
         self.assertTrue(res["verified"])
 
+    def test_root_source_plugin_is_found(self):
+        # atdd's marketplace entry is source "./" — its plugin.json sits at the
+        # marketplace root, not in a <plugin>/ subdir.
+        with tempfile.TemporaryDirectory() as tmp:
+            mk, _, _, _ = _setup(tmp)
+            with open(os.path.join(mk, "my-mp", ".claude-plugin",
+                                   "plugin.json"), "w") as f:
+                f.write('{"name": "atdd", "version": "0.8.3"}\n')
+            src, mp, pj, ver = dr.find_source("atdd", marketplaces=mk)
+        self.assertEqual(src, os.path.join(mk, "my-mp"))
+        self.assertEqual(ver, "0.8.3")
+
     def test_unlisted_plugin_is_not_an_error(self):
         text = '{"plugins": [{"name": "other", "version": "1.0.0"}]}'
         out, changed = dr._set_marketplace_version(text, "engineer", "9.9.9")

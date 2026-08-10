@@ -104,10 +104,13 @@ stays sequential when this feature's N is small:
 | discover-acs (reverse-eng) | the four passes over existing material | multi-modal sweep → dedup | 2 | inherit |
 | fix — investigate | top-3 candidate features | parallel prime-context | 2 | economy |
 | **CP2/CP4 exit — review panel** | the two standing roles | adviser + advocate, concurrent | 2 | frontier / inherit |
+| **CP5 exit — gauntlet** | rounds against a declared bar | loop-until (builder ↔ fresh critic) | 3 | inherit / frontier |
 
 **Tier** above is the parallelism substrate (1/2/3); **Model class** is a
 different axis — `economy` / `inherit` / `frontier`, never a product name, because
-model names get deprecated and classes do not. It is a prior, not a contract:
+model names get deprecated and classes do not. The **gauntlet** is the other
+fixed-composition entry (a builder and a fresh critic, alternating rather than
+concurrent): see `${CLAUDE_PLUGIN_ROOT}/references/gauntlet.md`. It is a prior, not a contract:
 re-derive it per dispatch from the actual charge, and resolve the class against
 the Agent tool's live `model` enum, per
 `${CLAUDE_PLUGIN_ROOT}/references/model-classes.md`. The review panel is the one fixed-composition

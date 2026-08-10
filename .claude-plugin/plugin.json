@@ -1,6 +1,6 @@
 {
   "name": "atdd",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Acceptance Test Driven Development for Claude Code. Enforces the ATDD methodology: write Given/When/Then specs first, generate a project-specific test pipeline, maintain two test streams (acceptance + unit). Inspired by Robert C. Martin's acceptance test approach from empire-2025.",
   "author": {
     "name": "Miklos"

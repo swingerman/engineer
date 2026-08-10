@@ -143,8 +143,30 @@ Instruct it to:
 - Never modify generated test files — only regenerate
 - Take the code to green only — deep refactoring is the `refiner`'s phase
 - If a spec seems wrong, stop and ask the team lead
+- **Run rounds without asking.** The failing tests are the bar; a round is
+  "pick the next failing test, close it, re-run". Do not pause between rounds
+  to report progress or ask whether to continue — that pause is the babysitting
+  the checkpoint exists to avoid. Escalate to the team lead only on: a spec that
+  looks wrong, a green test turning red, or `manifest.autonomy.stuck_loop_threshold`
+  consecutive rounds with no test moving to green.
 
-**Gate:** Both test streams green (Checkpoint 5 exit criteria).
+**Then — the gauntlet, if the feature declared a bar.** Once both streams are
+green, read `plan.md`'s Test strategy for a `gauntlet:` block. If there is one,
+loop a **fresh critic** against it: capture the candidate with the declared
+`capture:` command, A/B it against the bar, take the single largest gap back to
+the implementer, repeat until the critic returns `ties-or-wins` or a stop
+condition fires (`max_rounds`, two identical gaps, or a test stream regressing).
+This is what grades the things Gherkin cannot — visual fidelity to a ready
+design, output quality — instead of handing that grading back to the team lead
+one screenshot at a time. Critics are **plain subagents, never forks** (they
+re-run on their own captured output; a fork self-perpetuates). Record every
+round as `gauntlet_rounds[]` in the handoff. **No `gauntlet:` block → no loop,
+silently.** Full contract: the engineer plugin's `references/gauntlet.md`.
+
+**Gate:** Both test streams green (Checkpoint 5 exit criteria), and — when a bar
+was declared — the gauntlet stopped on `clear`. A gauntlet that stopped on
+`cap` / `no-progress` / `regression` hands off with `human_action_needed: yes`
+and the open gap named; the team lead decides whether to accept it or push.
 
 For the detailed prompt template, see `references/prompts.md` — Phase 4.
 
