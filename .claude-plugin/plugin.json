@@ -5,7 +5,7 @@
   "author": {
     "name": "Miklos"
   },
-  "repository": "https://github.com/swingerman/disciplined-agentic-engineering",
+  "repository": "https://github.com/swingerman/engineer",
   "license": "MIT",
   "keywords": ["atdd", "acceptance-testing", "tdd", "given-when-then", "spec-driven-design"]
 }

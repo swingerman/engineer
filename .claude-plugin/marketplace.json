@@ -17,8 +17,8 @@
       "author": {
         "name": "Miklos"
       },
-      "homepage": "https://github.com/swingerman/disciplined-agentic-engineering",
-      "repository": "https://github.com/swingerman/disciplined-agentic-engineering",
+      "homepage": "https://github.com/swingerman/engineer",
+      "repository": "https://github.com/swingerman/engineer",
       "license": "MIT",
       "keywords": ["atdd", "acceptance-testing", "tdd", "given-when-then", "spec-driven-design", "uncle-bob", "bdd"],
       "category": "development-workflows",
@@ -28,12 +28,12 @@
       "name": "engineer",
       "source": "./engineer",
       "description": "Disciplined Agentic Engineering (DAE) — methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
-      "version": "0.22.0",
+      "version": "0.24.0",
       "author": {
         "name": "Miklos"
       },
-      "homepage": "https://github.com/swingerman/disciplined-agentic-engineering",
-      "repository": "https://github.com/swingerman/disciplined-agentic-engineering",
+      "homepage": "https://github.com/swingerman/engineer",
+      "repository": "https://github.com/swingerman/engineer",
       "license": "MIT",
       "keywords": ["dae", "disciplined-agentic-engineering", "methodology", "ai-development", "tdd", "atdd", "engineering"],
       "category": "development-workflows",
@@ -48,8 +48,8 @@
         "name": "Miklos Szanyi",
         "url": "https://github.com/swingerman"
       },
-      "homepage": "https://github.com/swingerman/disciplined-agentic-engineering/tree/main/crap-analyzer",
-      "repository": "https://github.com/swingerman/disciplined-agentic-engineering",
+      "homepage": "https://github.com/swingerman/engineer/tree/main/crap-analyzer",
+      "repository": "https://github.com/swingerman/engineer",
       "license": "MIT",
       "keywords": ["code-quality", "testing", "coverage", "refactoring", "cyclomatic-complexity", "crap"],
       "category": "code-quality",

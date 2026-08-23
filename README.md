@@ -3,13 +3,13 @@
 *A methodology kit for engineering-led AI development — spec-driven, test-driven, charter-bound. ATDD + mutation testing + deterministic guardrails.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Reference host: Claude Code](https://img.shields.io/badge/reference%20host-Claude%20Code-blueviolet)](https://github.com/swingerman/disciplined-agentic-engineering)
+[![Reference host: Claude Code](https://img.shields.io/badge/reference%20host-Claude%20Code-blueviolet)](https://github.com/swingerman/engineer)
 
 **AI agents do the typing. Engineers stay in charge of architecture, behavior contracts, and verification.** DAE puts the discipline in *deterministic tools the agent has to satisfy* — not in prompt rules that erode over long runs.
 
 The methodology is host-independent. It ships today as three plugins for **Claude Code**, the reference host — see [Host independence](#host-independence).
 
-> ℹ️ **Repo renamed** from `swingerman/atdd`. Old URLs still redirect; update remotes only if you want to: `git remote set-url origin https://github.com/swingerman/disciplined-agentic-engineering.git`
+> ℹ️ **Repo renamed** to `swingerman/engineer` (formerly `swingerman/atdd`, then `swingerman/disciplined-agentic-engineering`). Old URLs still redirect; update remotes only if you want to: `git remote set-url origin https://github.com/swingerman/engineer.git`. The marketplace is still named `disciplined-agentic-engineering` — install refs (`@disciplined-agentic-engineering`) are unchanged.
 
 ---
 
@@ -33,7 +33,7 @@ The methodology is host-independent. It ships today as three plugins for **Claud
 On Claude Code:
 
 ```shell
-/plugin marketplace add swingerman/disciplined-agentic-engineering
+/plugin marketplace add swingerman/engineer
 
 /plugin install engineer@disciplined-agentic-engineering      # the DAE methodology kit
 /plugin install atdd@disciplined-agentic-engineering          # ATDD + differential mutation testing
@@ -43,8 +43,8 @@ On Claude Code:
 Or run from a clone:
 
 ```bash
-git clone https://github.com/swingerman/disciplined-agentic-engineering.git
-claude --plugin-dir ./disciplined-agentic-engineering
+git clone https://github.com/swingerman/engineer.git
+claude --plugin-dir ./engineer
 ```
 
 ### Your first feature
@@ -485,7 +485,7 @@ it adapts the methodology.
 ## Contributing
 
 Issues and PRs welcome on
-[GitHub](https://github.com/swingerman/disciplined-agentic-engineering).
+[GitHub](https://github.com/swingerman/engineer).
 
 ## License
 

@@ -41,6 +41,17 @@ automatically; for an external/self write, ask first with the specific action
 named. (This is why the auto-mode safety classifier kept blocking these — the
 skill should ask proactively instead of relying on the net.)
 
+**The one carve-out — `verify: auto` merge.** A feature whose
+`gate_profile.verify` is `auto` may **auto-merge its own PR without asking** —
+but only when `${CLAUDE_PLUGIN_ROOT}/scripts/dae_mergeready.py <feature-dir>`
+returns `ready: true` (fail-closed) and no guardrail forces human (opt-in,
+`autonomy_level` not `low`, no uncovered qualitative surface, no charter-flagged
+path, default `validation_method` — see `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md`).
+It posts the readiness bar as the PR comment. This is the **sole** exception to
+"creating/merging a PR always asks"; every other item above — pushing to
+main, force-push, self-modifying config, deploys, other external writes — still
+always asks, even under `verify: auto`.
+
 ## Channel — cloud-first, local fallback
 
 The autonomy table decides *whether* to dispatch. This decides *where*. Once a DISPATCH decision is made, prefer a **cloud agent** and fall back to a **local subagent** only when the environment requires it.

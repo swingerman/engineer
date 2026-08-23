@@ -6,8 +6,8 @@
     "name": "Miklos Szanyi",
     "url": "https://github.com/swingerman"
   },
-  "homepage": "https://github.com/swingerman/disciplined-agentic-engineering/tree/main/crap-analyzer",
-  "repository": "https://github.com/swingerman/disciplined-agentic-engineering",
+  "homepage": "https://github.com/swingerman/engineer/tree/main/crap-analyzer",
+  "repository": "https://github.com/swingerman/engineer",
   "license": "MIT",
   "keywords": ["code-quality", "testing", "coverage", "refactoring", "cyclomatic-complexity", "crap"]
 }

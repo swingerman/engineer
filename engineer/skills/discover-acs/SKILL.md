@@ -78,6 +78,8 @@ The handoff MUST include the `exit_criteria` block asserting each of Checkpoint 
 
 ACs ship with `human_action_needed: yes` (the human owns the AC contract) — so this checkpoint is one of the explicit stop points per `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`. Present the ACs for review; do **not** auto-dispatch CP3 atdd until the human has approved them.
 
+**Unless the feature's `gate_profile.front` says otherwise, and only at `autonomy_level` `medium`/`high`** (see `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md`): under `front: bundled` or `auto`, the AC contract is not approved *here* — it is approved as part of the one **front bundle** at CP4 (`bundled`), or trusted to the back gate (`auto`). In those cases set `human_action_needed: no`, note `front_gate: deferred` in the handoff, and auto-dispatch CP3. Only when `gate_profile` is **absent** — or when `autonomy_level` is **`low`** (which suppresses front-dialing; the human is reviewing everything anyway) — does the standalone AC stop above apply. That is the backward-compatible / safety default.
+
 ## References
 
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — when to dispatch vs stop
