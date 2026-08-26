@@ -5,15 +5,21 @@ description: Use to rough out a working thing fast, zero ceremony, before commit
 
 # prototype
 
-Iteration 0 of a feature: build a **rough working thing fast**, so intent is
-proven by a running artifact instead of an upfront spec. No ACs, no plan, no
-tests, no gates, no gauntlet — there is nothing to grade against yet, because
-**the prototype is what everything else will be graded against.** Most
-prototypes are learning; some promote into the disciplined flow, where the
-prototype becomes the reference **bar** the real build must match.
+The **prototype-first path** to a feature (see
+`${CLAUDE_PLUGIN_ROOT}/references/two-paths.md`). Build a **rough working thing
+fast** and **iterate it** — no feature list, no stories, just the concept and
+rounds — until it converges. No ACs, no plan, no tests, no gates, no gauntlet:
+there is nothing to grade against yet, because **the prototype is what
+everything else will be graded against.** Most prototypes are learning; the ones
+worth keeping **convert to spec** — reaching the *same* fully-specced, hardened
+feature as spec-first, by build-then-spec instead of spec-then-build.
+
+The **iteration loop is the point** — it is where the speed comes from. Expect
+several rounds; the "one thing it must demonstrate" sharpens as you go.
 
 Sits *before* `discuss`/`feature-init` in ceremony: `discuss` talks an idea
-through; `prototype` builds it to find out. Either can promote to a feature.
+through; `prototype` builds it to find out. `discuss` and `feature-init` offer
+this path as a first-class entry.
 
 ## When to use
 
@@ -52,22 +58,33 @@ must be correct, tested, or hardened; grading a prototype with the gauntlet
    `.engineer/prototypes.log`: `<ISO-timestamp> | <slug> | built | <one-line what>`.
 5. **Decide (human)** — recommend an outcome; the user confirms. Never
    auto-execute.
-   - **Iterate** — rebuild with feedback, same dir, still zero ceremony
-     (iteration 0.x). Update `PROTOTYPE.md`.
+   - **Iterate (the default while learning)** — rebuild with feedback, same dir,
+     still zero ceremony (iteration 0.x). Update `PROTOTYPE.md`. Stay here for as
+     many rounds as it takes — **convergence, not round count, is the exit.**
+     This loop is where the speed lives; don't rush out of it.
    - **Discard** — `rm -rf prototypes/<slug>/`; log line
      `... | discarded | <why>`. The learning stays in the log.
-   - **Promote** — it earned a real build:
+   - **Convert to spec (promote)** — the concept has converged and earned a real
+     build. This is the pivot from prototype-first into the pipeline (see
+     `${CLAUDE_PLUGIN_ROOT}/references/two-paths.md`):
      a. Invoke `feature-init` with `feature_intake { status: ready, ... }` —
         seed `outcome`/`title` from `PROTOTYPE.md`, carry `size` if obvious.
      b. Copy `prototypes/<slug>/` → `features/NNN-<slug>/prototype/` (**tracked**,
         so the bar travels with the feature to any agent/host), and record
         `prototype: prototype/` in `feature.md` frontmatter. Discard the
         gitignored original.
-     c. Hand off to `discover-acs` with the prototype + `PROTOTYPE.md` as the
-        seed. The prototype is **iteration 0**; `plan` (CP4) reads `prototype:`
-        and declares it as the `gauntlet:` bar so the real build is graded
-        against it (see `references/gauntlet.md`).
-     d. Log `... | promoted | features/NNN-<slug>/`.
+     c. **Set the disposition (size-dialed)** — record
+        `prototype_disposition: in-place | rebuild` in `feature.md` (defaulted
+        from `size`, overridable): **S/M → `in-place`** (the prototype code is
+        CP5's starting implementation; refine + verify + harden clean it);
+        **L/XL or risky → `rebuild`** (CP5 implements fresh against the derived
+        spec, with the prototype as the `gauntlet:` bar; its code is discarded).
+     d. Hand off to `discover-acs` **in reverse-engineer mode** with the
+        prototype + `PROTOTYPE.md` as the seed — this is "convert the artifact to
+        ACs," the same RE mode onboarding uses. The prototype is **iteration
+        0**; `plan` (CP4) reads `prototype:` and declares it as the `gauntlet:`
+        bar (see `references/gauntlet.md`).
+     e. Log `... | promoted | features/NNN-<slug>/`.
 
 ## Handoff
 
@@ -77,6 +94,7 @@ emits nothing. Discard is recorded by the log line only.
 
 ## References
 
+- `references/two-paths.md` — the prototype-first vs spec-first model + the size-dialed convert disposition
 - `references/gauntlet.md` — where a promoted prototype becomes the reference bar
 - `references/resolving.md` — root + manifest resolution
 - Sister skills: `discuss` (talk it through instead of building it), `feature-init`

@@ -311,10 +311,82 @@ def audit(start_dir, full):
     return root, rules, audit_rules(root, files, rules)
 
 
+def graph(start_dir):
+    """Component graph: layer nodes + aggregated layer->layer import edges.
+
+    Reuses the file-level import graph the fitness checks already build (and
+    otherwise discard). Nodes are the manifest's architecture layers; edges are
+    real file->file imports rolled up to layer->layer (kind "actual"), plus each
+    layer's declared `may_not_import` rules (kind "forbidden"; count>0 means the
+    rule is actually violated). Returns {arch_supported, layers, edges}; graceful
+    empty when there is no `architecture.layers` section.
+    """
+    result = dae_resolve.resolve(start_dir)
+    if result is None:
+        return {"arch_supported": False, "layers": [], "edges": []}
+    rules = (result["manifest"] or {}).get("architecture")
+    root = result["methodology_root"]
+    if not rules or not rules.get("layers"):
+        return {"arch_supported": False, "layers": [], "edges": []}
+    layer_rules = rules["layers"]
+    layer_globs = [(r["name"], _compile_globs(r.get("paths", []))) for r in layer_rules]
+    forbidden = {r["name"]: set(r.get("may_not_import", [])) for r in layer_rules}
+
+    all_files = files_in_scope(root, True)
+    igraph = _build_import_graph(root, all_files)  # {file: [target, ...]}
+    cyclic = set()
+    for cycle in check_cycles(igraph):
+        cyclic.update(cycle)
+
+    file_count = {r["name"]: 0 for r in layer_rules}
+    in_cycle = {r["name"]: False for r in layer_rules}
+    edge_counts = {}  # (src_layer, dst_layer) -> import count
+    for f in all_files:
+        src = _layer_of(f, layer_globs)
+        if src is None:
+            continue
+        file_count[src] += 1
+        if f in cyclic:
+            in_cycle[src] = True
+        for tgt in igraph.get(f, []):
+            dst = _layer_of(tgt, layer_globs)
+            if dst is None or dst == src:
+                continue
+            edge_counts[(src, dst)] = edge_counts.get((src, dst), 0) + 1
+
+    layers = [{
+        "name": r["name"],
+        "paths": r.get("paths", []),
+        "may_not_import": r.get("may_not_import", []),
+        "file_count": file_count[r["name"]],
+        "in_cycle": in_cycle[r["name"]],
+    } for r in layer_rules]
+
+    edges, seen = [], set()
+    for (src, dst), n in sorted(edge_counts.items()):
+        edges.append({"src": src, "dst": dst,
+                      "kind": "forbidden" if dst in forbidden.get(src, set()) else "actual",
+                      "count": n})
+        seen.add((src, dst))
+    # declared forbidden edges that are NOT violated (count 0) — show the rule
+    for r in layer_rules:
+        for dst in r.get("may_not_import", []):
+            if (r["name"], dst) not in seen:
+                edges.append({"src": r["name"], "dst": dst, "kind": "forbidden", "count": 0})
+
+    return {"arch_supported": True, "layers": layers, "edges": edges}
+
+
 def main(argv):
     args = list(argv)
     if args and args[0] in ("-h", "--help"):
         print(__doc__)
+        return 0
+    if "--graph" in args:
+        args.remove("--graph")
+        start_dir = args[0] if args else os.getcwd()
+        json.dump(graph(start_dir), sys.stdout, indent=2)
+        sys.stdout.write("\n")
         return 0
     fmt = "text"
     if "--format" in args:
