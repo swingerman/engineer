@@ -3,6 +3,7 @@
 import http.server
 import json
 import os
+import signal
 import socket
 import socketserver
 import subprocess
@@ -11,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 import dae_infra
 
@@ -493,6 +495,32 @@ class TestPidHelpers(unittest.TestCase):
 
     def test_dead_pgid_not_running(self):
         self.assertFalse(dae_infra._pgid_running(999999))
+
+    def test_group_alive_after_its_leader_is_reaped(self):
+        # start_background runs with shell=True, and the shell may fork and
+        # exit while its children keep running in the same group. That is the
+        # reason liveness is tracked per group and not per leader pid.
+        proc = subprocess.Popen(
+            "%s -c 'import time; time.sleep(30)' & exit 0" % sys.executable,
+            shell=True, start_new_session=True)
+        pgid = os.getpgid(proc.pid)
+        proc.wait()  # leader reaped -- only the backgrounded child is left
+        time.sleep(0.1)
+        try:
+            self.assertFalse(dae_infra._pid_running(pgid))
+            self.assertTrue(dae_infra._pgid_running(pgid))
+        finally:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass
+
+    def test_pgid_running_when_signalling_is_denied(self):
+        # EPERM means the group is there and we are merely not allowed to
+        # signal it -- that is a live group, not a missing one.
+        with mock.patch.object(dae_infra.os, "killpg",
+                               side_effect=PermissionError(1, "Operation not permitted")):
+            self.assertTrue(dae_infra._pgid_running(4242))
 
 
 # ---------------------------------------------------------------------------
