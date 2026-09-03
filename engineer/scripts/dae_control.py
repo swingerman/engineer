@@ -6,8 +6,8 @@ ARCHITECTURE map (layer nodes + import edges + health). Reads the same artifacts
 the pipeline already writes, reusing dae_dashboard + dae_arch. No writes, no
 dispatch, nothing sensitive leaves 127.0.0.1.
 
-  dae_control.py [START_DIR] [--port N]   serve at http://127.0.0.1:PORT
-  dae_control.py --json [START_DIR]       print the state blob and exit (headless)
+  dae_control.py [START_DIR] [--port N] [--window N]   serve at http://127.0.0.1:PORT
+  dae_control.py --json [START_DIR]                    print the state blob and exit (headless)
 
 stdlib-only. Ctrl-C to stop.
 """
@@ -20,9 +20,11 @@ import time
 
 import dae_arch
 import dae_dashboard
+import dae_metrics
 import dae_resolve
 
 DEFAULT_PORT = 8770
+_WINDOW = 90  # DORA operational window (days); set by main via --window
 _CACHE_TTL = 5.0  # ponytail: rebuild state at most every 5s; the import graph is
                   # the expensive part and a polling page doesn't need it fresher.
 
@@ -74,6 +76,10 @@ def build_state(start_dir):
         "edges": g["edges"],
         "violations": comps.get("violations", []),
     }
+    try:
+        data["metrics"] = dae_metrics.compute(start_dir, _WINDOW)
+    except Exception as e:  # metrics are a bonus panel, never a hard failure
+        data["metrics"] = {"error": str(e), "dora": None, "governance": []}
     data["generated_at"] = int(time.time())
     return data
 
@@ -149,6 +155,15 @@ def main(argv):
             sys.stderr.write("--port needs an integer\n")
             return 3
         del args[i:i + 2]
+    if "--window" in args:
+        i = args.index("--window")
+        try:
+            global _WINDOW
+            _WINDOW = int(args[i + 1])
+        except (IndexError, ValueError):
+            sys.stderr.write("--window needs an integer\n")
+            return 3
+        del args[i:i + 2]
     start_dir = args[0] if args else os.getcwd()
     if as_json:
         json.dump(build_state(start_dir), sys.stdout, indent=2)
@@ -211,12 +226,21 @@ word-break:break-all}
 .badge{font-size:11px;padding:1px 7px;border-radius:20px;font-weight:600;margin-left:6px}
 .badge.ok{background:#1f6f2e;color:#d7ffd9}.badge.bad{background:#7a1d1d;color:#ffd7d7}
 .empty{color:var(--mut);padding:36px 0;text-align:center}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.tile .tv{font-size:26px;font-weight:700}.tile .tv .u{font-size:14px;color:var(--mut);font-weight:600;margin-left:2px}
+.tile .tl{font-size:13px;margin-top:2px}.tile .ts{font-size:11px;color:var(--mut);margin-top:4px}
+.sec{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+table.gov{border-collapse:collapse;width:100%;max-width:560px}
+table.gov th{text-align:left;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-bottom:1px solid var(--line)}
+table.gov td{padding:5px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.slug{font-family:ui-monospace,monospace;font-size:13px}.idle{padding:8px 0}
 .vio{margin-top:8px;font-size:12px;font-family:ui-monospace,monospace;color:var(--mut)}
 .vio div{padding:2px 0;border-top:1px dashed var(--line)}
 </style></head><body>
 <header><h1>engineer · control</h1><div class="sub" id="sub"></div>
 <div class="live" id="live"></div></header>
-<nav><button id="tabP" class="on">Pipeline</button><button id="tabA">Architecture</button></nav>
+<nav><button id="tabP" class="on">Pipeline</button><button id="tabA">Architecture</button><button id="tabM">Metrics</button></nav>
 <main id="app"></main>
 <script>
 var D=null, TAB='P', OPEN={}, ONODE=null;
@@ -302,16 +326,34 @@ function architecture(){
  side+='</div>';
  return '<div class="archwrap">'+svg+side+'</div>';
 }
+function metrics(){
+ var m=D.metrics;
+ if(!m||!m.dora) return '<div class="empty">metrics unavailable'+(m&&m.error?': '+esc(m.error):'')+'</div>';
+ var d=m.dora;
+ function tile(label,val,sub){return '<div class="tile"><div class="tv">'+val+'</div><div class="tl">'+esc(label)+'</div><div class="ts">'+esc(sub||'')+'</div></div>';}
+ var h='<div class="mut" style="margin-bottom:10px">DORA · deploy frequency & change-fail rate over last '+m.window_days+' days · lead time & MTTR all-time</div><div class="tiles">';
+ h+=tile('Deploy frequency', d.deploy_frequency.per_week+'<span class="u">/wk</span>', d.deploy_frequency.count+' in window');
+ h+=tile('Lead time', d.lead_time_days.median==null?'—':d.lead_time_days.median+'<span class="u">d</span>', 'median · n='+d.lead_time_days.n);
+ h+=tile('Change failure rate', d.change_failure_rate.rate==null?'—':Math.round(d.change_failure_rate.rate*100)+'<span class="u">%</span>', d.change_failure_rate.fixes+' fixes / '+d.change_failure_rate.deploys+' deploys');
+ h+=tile('MTTR', d.mttr_days.median==null?'—':d.mttr_days.median+'<span class="u">d</span>', 'median · n='+d.mttr_days.n);
+ h+='</div><div class="sec">Governance — artifact versions per feature</div>';
+ if(!m.governance.length) return h+'<div class="idle mut">no handoff history yet</div>';
+ h+='<table class="gov"><thead><tr><th>feature</th><th>versions</th><th>last touched</th></tr></thead><tbody>';
+ h+=m.governance.slice(0,30).map(function(r){return '<tr><td class="slug">'+esc(r.feature)+'</td><td>'+r.artifact_versions+'</td><td class="mut">'+esc(r.last_touched)+'</td></tr>';}).join('');
+ return h+'</tbody></table>';
+}
 function draw(){
  if(!D){document.getElementById('app').innerHTML='<div class="empty">loading…</div>';return;}
  document.getElementById('sub').textContent=D.project+' · '+D.features.length+' features'+
   (D.components.arch_supported?' · '+D.components.layers.length+' layers':'');
  document.getElementById('tabP').className=TAB==='P'?'on':'';
  document.getElementById('tabA').className=TAB==='A'?'on':'';
- document.getElementById('app').innerHTML=TAB==='P'?pipeline():architecture();
+ document.getElementById('tabM').className=TAB==='M'?'on':'';
+ document.getElementById('app').innerHTML=TAB==='P'?pipeline():TAB==='A'?architecture():metrics();
 }
 document.getElementById('tabP').onclick=function(){TAB='P';draw();};
 document.getElementById('tabA').onclick=function(){TAB='A';draw();};
+document.getElementById('tabM').onclick=function(){TAB='M';draw();};
 document.getElementById('app').addEventListener('click',function(e){
  var row=e.target.closest('.row');
  if(row){var s=row.getAttribute('data-slug');OPEN[s]=!OPEN[s];draw();return;}

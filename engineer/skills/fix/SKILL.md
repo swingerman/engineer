@@ -17,6 +17,8 @@ Unlike ad-hoc fixes, the `fix` workflow enforces a regression spec that must be 
 
 **Not for:** building a new capability (`/engineer.discuss` or `/engineer.feature-init`); adjusting an in-flight feature's scope (`/engineer.feature-edit`); reviewing recent changes without a defect (`/engineer.verify` or `/crap-analyzer`).
 
+**Maintenance auto-invocation.** `fix` is the landing point of the SDLC's maintenance loop (`${CLAUDE_PLUGIN_ROOT}/references/intent.md`): a trigger — a Sentry/CI alert, a Slack message, or a schedule — can invoke it with no human at the start. Wire the trigger via the `schedule` skill (cron routines) or an external alert calling `claude -p "/engineer.fix <signal>"`; Step 1 synthesizes the bug intent from the signal/logs and the pipeline runs, surfacing to a human only at the review gates its `severity` + effective autonomy demand (a `critical` or user-blocking defect always confirms; low-severity internal ones can run further unattended). The external-write gate (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`) still applies — a maintenance run never merges/deploys on its own unless `verify: auto` + `dae_mergeready` clear it.
+
 ## Workflow
 
 **Infra contract.** Any step that runs tests, mutations, or the regression spec MUST first ensure required infra is up via `${CLAUDE_PLUGIN_ROOT}/scripts/dae_infra.py ensure <names>` (reading the manifest's `infra:` section). On a `start-failed` failure → stop and surface the structured diagnosis. On undeclared required infra → stop with "declare in manifest" message. This applies to Steps 3, 4, 7.
@@ -39,7 +41,7 @@ mmc ran 5 sequential fixes from one `/engineer.fix` invocation because the skill
 
 ### Step 1 — Capture
 
-Accept free-form input; no feature slug required. Collect: title, severity (`low | medium | high | critical`), source (`kind: sentry|github|slack|user|internal`, `ref: <url-or-id>`), whether it blocks users (`blocks_user`), workaround (`"none"` if none), and a concise repro/expected/actual.
+Accept free-form input; no feature slug required. Collect: title, severity (`low | medium | high | critical`), source (`kind: sentry|github|slack|user|internal`, `ref: <url-or-id>`), whether it blocks users (`blocks_user`), workaround (`"none"` if none), and a concise repro/expected/actual. **This capture is the bug intent** (`${CLAUDE_PLUGIN_ROOT}/references/intent.md`) — synthesized from whatever signal arrived (a Sentry alert, stack trace, Slack message, or raw log), exactly as `discuss` synthesizes a feature intent.
 
 Write `.engineer/fixes/<YYYY-MM-DD-slug>.md` via the schema in `references/artifact-template.md`. Set `status: investigating`.
 
