@@ -1,11 +1,27 @@
 {
   "name": "engineer",
-  "version": "0.27.0",
-  "description": "Disciplined Agentic Engineering (DAE) — methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
+  "version": "0.28.0",
+  "description": "Disciplined Agentic Engineering (DAE) \u2014 methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
   "author": {
     "name": "Miklos"
   },
   "repository": "https://github.com/swingerman/engineer",
   "license": "MIT",
-  "keywords": ["dae", "disciplined-agentic-engineering", "methodology", "ai-development", "tdd", "atdd", "engineering"]
+  "keywords": [
+    "dae",
+    "disciplined-agentic-engineering",
+    "methodology",
+    "ai-development",
+    "tdd",
+    "atdd",
+    "engineering"
+  ],
+  "decarchy": {
+    "lifecycles": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/dae_lifecycle.py"
+      ]
+    }
+  }
 }
