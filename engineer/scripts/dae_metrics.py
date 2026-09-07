@@ -19,11 +19,27 @@ import subprocess
 import sys
 import time
 
-import dae_dashboard
 import dae_resolve
 
 _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 DAY = 86400
+
+
+def _frontmatter(text):
+    """Top-level scalar keys from a `--- ... ---` YAML block.
+    ponytail: scalars only — nested lists (source_links, tags) are skipped
+    because no metric needs them. PyYAML would be a dep for less.
+    """
+    m = re.match(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.DOTALL)
+    if not m:
+        return {}
+    out = {}
+    for line in m.group(1).splitlines():
+        km = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
+        if km:
+            val = km.group(2).strip().strip('"').strip("'")
+            out[km.group(1)] = val
+    return out
 
 
 def _git(root, *args):
@@ -53,7 +69,7 @@ def _feature_lead_times(root):
         if not os.path.isfile(fm_path):
             continue
         with open(fm_path, encoding="utf-8", errors="replace") as fh:
-            fm = dae_dashboard._frontmatter(fh.read())
+            fm = _frontmatter(fh.read())
         if (fm.get("status") or "").lower() not in ("done", "merged-unverified"):
             continue
         m = _DATE_RE.search(fm.get("created", ""))
