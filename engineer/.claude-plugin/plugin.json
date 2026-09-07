@@ -1,6 +1,6 @@
 {
   "name": "engineer",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "description": "Disciplined Agentic Engineering (DAE) — methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
   "author": {
     "name": "Miklos"
