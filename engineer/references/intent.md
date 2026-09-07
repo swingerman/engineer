@@ -69,7 +69,7 @@ DAE covers the whole life cycle, more strictly:
 | test (lint/e2e/evals) | CP6 refine + CP7 verify (arch-check, CRAP, mutation, gauntlet) + plugin eval |
 | deploy (PR, async Claude review, gates) | `verify: auto` + `dae_mergeready` + `post-merge` + `/code-review` + `/security-review` |
 | maintenance (auto-invoke, self-generated intent) | `fix` (+ "why didn't we catch it" loop) + trigger→intent (this doc) |
-| artifact chain, versioned + governed | handoffs (versioned transitions) + tracker + ontology; DORA/governance metrics → the control surface |
+| artifact chain, versioned + governed | handoffs (versioned transitions) + tracker + ontology; `dae_metrics` (DORA/governance) |
 
 Where DAE goes beyond the playbook: the charter + `arch-check`, deterministic
 ledger gates, `gate_profile`/`verify: auto` (human-at-the-ends, formalized), the
