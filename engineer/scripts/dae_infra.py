@@ -145,12 +145,26 @@ def _pid_running(pid: int) -> bool:
 
 
 def _pgid_running(pgid: int) -> bool:
-    """True if any process in the group is running (uses pgrep -g)."""
+    """True if any process in the group is running.
+
+    Asks the kernel, not an external pgrep: the busybox applet that ships as
+    pgrep in alpine images rejects -g with exit 1 -- the very code procps uses
+    for "no matches" -- so a nonzero exit cannot be read as an answer.
+    """
     try:
-        return subprocess.run(["pgrep", "-g", str(pgid)],
-                              capture_output=True, timeout=3).returncode == 0
-    except Exception:
-        return _pid_running(pgid)
+        pgid = int(pgid)
+    except (TypeError, ValueError):
+        return False
+    if pgid <= 0:
+        # killpg(0) would signal our own group and always report "alive".
+        return False
+    try:
+        os.killpg(pgid, 0)
+        return True
+    except PermissionError:
+        return True  # group exists, we are just not allowed to signal it
+    except OSError:
+        return False
 
 
 def load_entries(root: str) -> dict:

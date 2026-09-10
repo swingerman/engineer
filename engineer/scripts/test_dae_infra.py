@@ -3,6 +3,7 @@
 import http.server
 import json
 import os
+import signal
 import socket
 import socketserver
 import subprocess
@@ -11,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 import dae_infra
 
@@ -478,6 +480,119 @@ class TestPidHelpers(unittest.TestCase):
             self.assertTrue(dae_infra._pgid_running(pgid))
         finally:
             proc.kill(); proc.wait()
+
+    def test_pgid_zero_not_running(self):
+        # 0 means "the caller's own group" to killpg -- never a stored pgid.
+        self.assertFalse(dae_infra._pgid_running(0))
+
+    def test_pgid_negative_not_running(self):
+        self.assertFalse(dae_infra._pgid_running(-1))
+
+    def test_pgid_unparsable_not_running(self):
+        # A hand-edited or corrupt state file must not crash read_state.
+        self.assertFalse(dae_infra._pgid_running("not-a-pgid"))
+        self.assertFalse(dae_infra._pgid_running(None))
+
+    def test_dead_pgid_not_running(self):
+        self.assertFalse(dae_infra._pgid_running(999999))
+
+    def test_group_alive_after_its_leader_is_reaped(self):
+        # start_background runs with shell=True, and the shell may fork and
+        # exit while its children keep running in the same group. That is the
+        # reason liveness is tracked per group and not per leader pid.
+        proc = subprocess.Popen(
+            "%s -c 'import time; time.sleep(30)' & exit 0" % sys.executable,
+            shell=True, start_new_session=True)
+        pgid = os.getpgid(proc.pid)
+        proc.wait()  # leader reaped -- only the backgrounded child is left
+        time.sleep(0.1)
+        try:
+            self.assertFalse(dae_infra._pid_running(pgid))
+            self.assertTrue(dae_infra._pgid_running(pgid))
+        finally:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass
+
+    def test_pgid_running_when_signalling_is_denied(self):
+        # EPERM means the group is there and we are merely not allowed to
+        # signal it -- that is a live group, not a missing one.
+        with mock.patch.object(dae_infra.os, "killpg",
+                               side_effect=PermissionError(1, "Operation not permitted")):
+            self.assertTrue(dae_infra._pgid_running(4242))
+
+
+# ---------------------------------------------------------------------------
+# 12a. Regression: _pgid_running must not depend on the installed pgrep
+# ---------------------------------------------------------------------------
+
+def _busybox_pgrep_dir() -> str:
+    """Dir with a `pgrep` that refuses -g the way the busybox applet does:
+    usage on stderr, exit 1 -- the same code procps uses for "no matches"."""
+    d = tempfile.mkdtemp()
+    shim = os.path.join(d, "pgrep")
+    with open(shim, "w") as f:
+        f.write("#!/bin/sh\n"
+                "case \"$1\" in\n"
+                "  -g) echo 'pgrep: unrecognized option: g' >&2\n"
+                "      echo 'Usage: pgrep [-flanovx] [-s SID|-P PPID|PATTERN]' >&2\n"
+                "      exit 1 ;;\n"
+                "esac\n"
+                "exit 1\n")
+    os.chmod(shim, 0o755)
+    return d
+
+
+class TestPgidRunningWithoutProcpsPgrep(unittest.TestCase):
+    """Liveness of a process group must not depend on which pgrep is installed.
+
+    The pgrep on PATH here rejects -g, as the busybox applet does in every
+    alpine image: it prints usage and exits 1 -- the same code procps uses
+    for "no matches".
+    """
+
+    def setUp(self):
+        shim_dir = _busybox_pgrep_dir()
+        self.addCleanup(_rmtree, shim_dir)
+        old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = shim_dir + os.pathsep + old_path
+        self.addCleanup(os.environ.__setitem__, "PATH", old_path)
+
+    def _spawn_group(self):
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"],
+                                start_new_session=True)
+        pgid = os.getpgid(proc.pid)
+        time.sleep(0.1)
+        return proc, pgid
+
+    def _reap(self, proc):
+        try:
+            proc.kill()
+        except OSError:
+            pass
+        proc.wait()
+
+    def test_live_group_reported_running(self):
+        proc, pgid = self._spawn_group()
+        self.addCleanup(self._reap, proc)
+        self.assertTrue(dae_infra._pgid_running(pgid))
+
+    def test_dead_group_reported_not_running(self):
+        proc, pgid = self._spawn_group()
+        self._reap(proc)
+        self.assertFalse(dae_infra._pgid_running(pgid))
+
+    def test_live_service_state_survives_read(self):
+        proc, pgid = self._spawn_group()
+        self.addCleanup(self._reap, proc)
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(_rmtree, tmp)
+        dae_infra.write_state(tmp, "svc", {"name": "svc", "pid": proc.pid,
+                                           "pgid": pgid, "started_at": "now"})
+        self.assertIsNotNone(dae_infra.read_state(tmp, "svc"))
+        self.assertTrue(os.path.isfile(
+            os.path.join(tmp, ".engineer", "infra", "svc.json")))
 
 
 # ---------------------------------------------------------------------------
