@@ -474,6 +474,35 @@ class BlockScalarTests(unittest.TestCase):
         self.assertEqual(m["items"][0]["body"], "- bullet a\n- bullet b")
         self.assertEqual(m["items"][1]["body"], "hello world")
 
+    def test_chomping_and_indent_indicators_are_accepted(self):
+        # The bug reproducer: `>-` is what editors and agents write by default,
+        # and the bare-`|`/`>` header regex rejected it. The header then parsed
+        # as an ordinary scalar and its continuation lines raised
+        # ManifestError, which tracked_feature() swallows — so one feature.md
+        # went invisible to the tracker with no diagnostic anywhere.
+        for header, expected in (
+            ("|", "line1\nline2"),
+            ("|-", "line1\nline2"),
+            ("|+", "line1\nline2"),
+            ("|2", "line1\nline2"),
+            ("|2-", "line1\nline2"),
+            (">", "line1 line2"),
+            (">-", "line1 line2"),
+            (">+", "line1 line2"),
+            (">2", "line1 line2"),
+            (">-2", "line1 line2"),
+        ):
+            m = dr.read_manifest("key: %s\n  line1\n  line2\n" % header)
+            self.assertEqual(m["key"], expected,
+                             "header %r parsed wrong" % header)
+
+    def test_indicator_only_applies_to_a_block_header(self):
+        # A value that merely starts with `>` or `|` is still a plain scalar.
+        m = dr.read_manifest("a: >>\nb: '|-'\nc: 1\n")
+        self.assertEqual(m["a"], ">>")
+        self.assertEqual(m["b"], "|-")
+        self.assertEqual(m["c"], 1)
+
 
 class InfraValidationTests(unittest.TestCase):
     _BASE = "paths:\n  features: features\n"

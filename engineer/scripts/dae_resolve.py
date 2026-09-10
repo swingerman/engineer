@@ -59,7 +59,15 @@ INFRA_HEALTH_TYPES = {"http", "tcp", "process", "command"}
 INFRA_TEARDOWN_MODES = {"leave-running", "session-end", "always"}
 INFRA_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,49}$")
 
-_BLOCK_HEADER_RE = re.compile(r'^([\w.-]+):\s*([|>])\s*$')
+# A block-scalar header may carry a chomping indicator (`-` strip, `+` keep)
+# and/or an explicit indentation indicator, in either order: `>-`, `|+`, `>2`,
+# `|2-`. They are accepted and discarded — group 2 stays just the style. The
+# assembler below always strips trailing newlines and re-derives the indent
+# from the first non-blank line, so neither indicator has anything left to
+# change; `+` (keep) is the one lossy case, and this parser has no way to
+# represent trailing blank lines anyway.
+_BLOCK_HEADER_RE = re.compile(
+    r'^([\w.-]+):\s*([|>])(?:[0-9]+[-+]?|[-+][0-9]*)?\s*$')
 
 
 class ManifestError(Exception):
