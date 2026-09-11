@@ -9,9 +9,11 @@ CP1.5 is renamed. This prints the pipeline instead, so those tools can ask.
 The stage order and names come from `dae_progress.CHECKPOINTS`, which is already
 this repo's single source of truth for them. Nothing here restates them.
 
-Exit criteria are deliberately absent. DAE's real criteria live in each
-project's charter and arrive on the handover at runtime, so a definition that
-carried them would be describing one project rather than the process.
+Exit criteria are one per stage: the process-level thing that is true of every
+DAE feature, in the wording the handovers already use. A project's charter
+criteria are richer and still arrive on the handover at runtime — these are the
+floor, so a tool can say what finishing looks like before any handover exists.
+`verified_by` is claimed honestly; `tool` only where a command really settles it.
 
 Usage:
   dae_lifecycle.py            print the lifecycles as JSON on stdout
@@ -72,6 +74,34 @@ PROTOTYPE_OVERRIDES = {
         "fresh against the derived spec and throw the prototype away."),
 }
 
+# One criterion per stage, keyed by stage id so all three lifecycles share them —
+# prototype-first enters the same checkpoints, and a fix stage is a stage.
+# Nothing here restates a stage label: "implementation complete" is not a
+# criterion, "the specs pass and the existing gate is still green" is.
+EXIT = {
+    "feature": ("feature.md states the outcome and what is out of scope", "judgment"),
+    "prototype": ("A human has said the concept converged", "human"),
+    "1.5": ("Nothing is left ambiguous that was not decided by a person", "human"),
+    "2": ("Each criterion is in domain language and leaks no implementation", "judgment"),
+    "3": ("Every criterion maps to a scenario, and the pipeline runs them red", "tool"),
+    "4": ("The plan names the files, the phase order and each phase's gate", "human"),
+    "5": ("The specs pass and the existing gate is still green", "tool"),
+    "6": ("Both test streams pass and no behaviour moved", "tool"),
+    "7": ("An agent that did not build it re-ran the gates and reports agreement", "tool"),
+    "8": ("Every surviving mutant is killed or written down as accepted", "tool"),
+    "reported": ("The report is restated as observed behaviour, with no cause assumed", "judgment"),
+    "reproduced": ("A test fails on demand, and fails for the reported reason", "tool"),
+    "fixed": ("The reproduction passes and the rest of the suite still does", "tool"),
+    "gap_closed": ("The missing criterion, spec or test is named, and it now exists", "human"),
+}
+
+
+def exit_criteria(sid):
+    """A stage with no entry would publish an empty definition of done — loud."""
+    text, verified_by = EXIT[sid]
+    return [{"text": text, "verifiedBy": verified_by}]
+
+
 # Every agentic stage opens the same way. A stage whose agent has not said what
 # done looks like has no way to know when to stop, and the human reviewing it
 # has nothing to review against.
@@ -89,7 +119,7 @@ def stage(sid, label, skills, gate, attention, pick_up, blurb):
         "owner": "agent",
         "detect": [{"from": "record"}],
         "artifacts": [{"label": "A handover record", "required": True}],
-        "exit": [],
+        "exit": exit_criteria(sid),
         "gate": {"kind": gate},
         "pickUp": GOAL_PREAMBLE + pick_up,
         "skills": skills,
