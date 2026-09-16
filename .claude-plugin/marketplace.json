@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Disciplined Agentic Engineering — a methodology kit for Claude Code: the engineer, atdd, and crap-analyzer plugins, grounded in Uncle Bob's acceptance-test approach",
-    "version": "1.14.0"
+    "version": "1.14.1"
   },
   "plugins": [
     {
@@ -28,7 +28,7 @@
       "name": "engineer",
       "source": "./engineer",
       "description": "Disciplined Agentic Engineering (DAE) — methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
-      "version": "0.29.0",
+      "version": "0.30.0",
       "author": {
         "name": "Miklos"
       },
