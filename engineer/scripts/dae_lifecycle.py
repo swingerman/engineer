@@ -22,17 +22,23 @@ import sys
 from dae_progress import CHECKPOINTS
 
 # Per checkpoint: the skills that own it, the gate that follows it, and what an
-# agent picking the work up there is told. Keyed by the checkpoint numbers in
+# agent picking the work up there is told.
+#
+# Gates are the gate profile's two human stops (references/gate-profile.md):
+# front after CP4, back at CP7. A board holds work at every unmet gate, so a
+# gate at CP1.5 or CP2 would park a bundled feature the skills carry straight
+# through. `autonomy_level: low` still stops per-checkpoint — the skills do
+# that themselves, not the board. Keyed by the checkpoint numbers in
 # dae_progress.CHECKPOINTS so a renamed stage cannot silently lose its brief.
 #
 # CP0 Onboard is excluded: it is project scope, not feature scope, and runs
 # without a feature folder. Listed as stage zero it would make every new feature
 # read "not started: adopt the methodology".
 FEATURE = {
-    1.5: (["/engineer.clarify"], "decision", "decision",
+    1.5: (["/engineer.clarify"], "none", "decision",
           "Resolve what is still ambiguous, and stop when a decision is needed "
           "rather than guessing."),
-    2: (["/engineer.discover-acs"], "review", "decision",
+    2: (["/engineer.discover-acs"], "none", "decision",
         "Discover the acceptance criteria. They are the contract everything "
         "downstream is graded on."),
     3: (["/engineer.atdd"], "none", "decision",
@@ -56,7 +62,7 @@ FEATURE = {
 # differently — see references/two-paths.md. CP5 onward is identical, which is
 # why it is absent here.
 PROTOTYPE_OVERRIDES = {
-    2: (["/engineer.discover-acs"], "review", "decision",
+    2: (["/engineer.discover-acs"], "none", "decision",
         "Reverse-engineer the acceptance criteria from the converged "
         "prototype. The prototype is the evidence; do not invent criteria it "
         "does not demonstrate."),
@@ -158,6 +164,28 @@ FIX_STAGES = [
 ]
 
 
+def express_stages():
+    """The XS lane: feature-init, then one pass. See references/express-lane.md.
+
+    One stage, not intake/implement/verify: /engineer.express runs them in a
+    single context and hands off once (`checkpoint: null`), so there is no
+    boundary a board could observe between them. Escalation joins the feature
+    lifecycle at CP2 — the item is rebound, the branch and tracker row kept.
+    """
+    return [
+        entry_stage(),
+        stage(
+            "express", "Express",
+            ["/engineer.express"], "review", "review",
+            "Build this XS feature in one pass: one acceptance test as the "
+            "spec, implement to green, run the deterministic gates, open the "
+            "PR. If it turns out bigger than one PR, stop and escalate to "
+            "/engineer.discover-acs rather than pressing on.",
+            "One pass: test, code, gates, PR. The PR is what gets reviewed.",
+        ),
+    ]
+
+
 def lifecycles():
     return [
         {
@@ -171,6 +199,12 @@ def lifecycles():
             "label": "DAE feature (prototype-first)",
             "blurb": "Build first, then derive the criteria from what converged.",
             "stages": prototype_stages(),
+        },
+        {
+            "id": "express",
+            "label": "DAE express (XS)",
+            "blurb": "One pass for a one-PR change: the test is the spec.",
+            "stages": express_stages(),
         },
         {
             "id": "fix",
