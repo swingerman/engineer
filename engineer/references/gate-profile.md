@@ -49,10 +49,19 @@ their upfront spec and lean on the automated gates:
 
 | `size` | `front` | `verify` | reading |
 |---|---|---|---|
+| **XS** | `auto` | `light` | the express lane — one pass, no chain, code-first (below) |
 | **S** | `auto` | `heavy` | barely spec it, but look hard at the result |
 | **M** | `bundled` | `standard` | one front approval, normal verify |
 | **L** | `bundled` | `standard` | real front spec+arch, normal verify |
 | **XL** | `bundled` | `light` | invest upfront; trust the gauntlet + tests at the end |
+
+**XS is the express lane** (`gate_profile.lane: express`): one born-die agent
+runs intake→implement→verify in a single context, no per-checkpoint handoff
+chain, no `acs.md`/`spec.md`/`plan.md` — the acceptance test is the spec, docs
+capped below code. Same tracker row + deterministic gates as any feature. It is
+the small end of this dial and the weight a converged prototype lands at
+`in-place` (`references/two-paths.md`). Full contract, guardrails, and the
+one-way escalation ratchet: `${CLAUDE_PLUGIN_ROOT}/references/express-lane.md`.
 
 Defaults only — a feature may carry an explicit `gate_profile:` that overrides
 the size default (e.g. a small but risky payment change → `front: bundled`).
