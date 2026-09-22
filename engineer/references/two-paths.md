@@ -43,11 +43,20 @@ ACs, retrofit the plan. What happens to the rough prototype **code** is
 
 | `size` | disposition | CP5 implement |
 |---|---|---|
+| **XS** (tiny, low-risk) | **express in place** | the prototype code is the implementation; the express lane refines + verifies it in one pass, light gates (`references/express-lane.md`) |
 | **S / M** (low-risk) | **harden in place** | the prototype code *is* the starting implementation; refine + verify + harden clean it (Uncle Bob's bet: strong gates beat the cruft) |
 | **L / XL** (or risky) | **rebuild against the bar** | implement fresh against the derived spec; the prototype is the `gauntlet:` bar the result must match; its code is thrown away |
 
 Recorded on `feature.md` at convert time as `prototype_disposition: in-place |
 rebuild` (defaulted from size, overridable). CP5 reads it.
+
+**The front-half is orthogonal to the weight.** prototype-first and spec-first
+are two ways to answer *what to build*; **express (XS) vs full DAE** is a
+separate decision about *how much pipeline it deserves*, made at the same sizing
+gate from either front-half. A converged prototype re-enters that gate — its
+disposition (row above) is exactly the weight decision, with XS as the small
+notch. See `references/choice-points.md` for the two funnel decisions and the
+size projection that recommends one.
 
 ## Deliberately not built — micro-prototyping within a feature
 

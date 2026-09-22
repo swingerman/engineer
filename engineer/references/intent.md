@@ -37,8 +37,12 @@ An originator who doesn't want an interactive `discuss` session can **write an
 DAE accepts it as a seed:
 
 - **feature intent** → `discuss` / `feature-init` read the `intent.md` instead of
-  interviewing, confirm the synthesis with the originator, and proceed (or route
-  to the prototype-first path — see `references/two-paths.md`).
+  interviewing, confirm the synthesis with the originator, and proceed. The same
+  front-loaded triage runs on the synthesized intent: project size + clarity and
+  recommend the front-half (spec-first vs prototype-first, `references/two-paths.md`)
+  and weight (express XS vs full DAE, `references/express-lane.md`) as a **choice
+  point** (`references/choice-points.md`) — a recommendation to approve or bump,
+  not a cold interview.
 - **bug intent** → `/engineer.fix` reads it as the Step 1 capture.
 
 This is the same "originator drops their thoughts" flow the playbook describes —
