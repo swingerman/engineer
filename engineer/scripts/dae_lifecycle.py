@@ -54,8 +54,9 @@ FEATURE = {
     7: (["/engineer.arch-check", "/crap-analyzer"], "review", "review",
         "Verify the work against the charter. You did not implement this; do "
         "not defend it."),
-    8: (["atdd:atdd-mutate"], "none", "shipping",
-        "Harden: check the tests actually fail when the code is wrong."),
+    8: (["/engineer.harden"], "none", "shipping",
+        "Harden: check the tests actually fail when the code is wrong, and "
+        "formally check the invariants the advisor says are worth it."),
 }
 
 # What prototype-first changes, and only that. Same checkpoints, entered

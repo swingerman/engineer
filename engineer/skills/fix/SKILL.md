@@ -91,13 +91,13 @@ Run `engineer:arch-check` on each touched feature. Run `crap-analyzer` on the fi
 
 ### Step 7 — Harden (CP8 + CONFIRM-FIRST GATE 2)
 
-**Introversion pre-scan (cheap, runs first).** Before mutation, run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_introvert.py <methodology-root>` — it flags *introverted* tests that can pass without asserting on SUT output (`no-assertion`, and `conditional-assertion` where every assertion is nested in a conditional/loop/try, the classic vacuous-test case). It defers to a real backend when `manifest.introversion.backend` is set (e.g. a `deintroverter` that backward-slices each assertion to the SUT) and otherwise runs a built-in Python-AST fallback; any non-`ok` status is advisory — proceed. For each finding, dispatch an agent to inspect the test and confirm whether it is vacuous; fold confirmed cases into the harden report and treat them like surviving mutants (write a real assertion, then re-run). A test flagged here **and** later carrying a surviving mutant is a high-confidence vacuous test. Record `harden_results.introversion`.
+Run `/engineer.harden` in **fix mode** over the fix diff. It runs the refinement-advisor, the introversion pre-scan, mutation testing, any confirmed TLA+/Lean checks (a fix to a retry, race, or parser bug is a strong formal candidate), and the arch re-check. It records `harden_results.{advisor, introversion, mutation_score, formal, arch_check}` in this fix record.
 
-Run `atdd:atdd-mutate` on touched files. Record `harden_results.mutation_score`.
+Then the fix-specific gate:
 
 **Bug-line mutation gate:** recover the buggy line(s) via `git show HEAD~1 -- <file>`, apply locally, run only the regression spec, assert RED. If the spec stays GREEN the spec is coupled to the fix, not the bug — back to Step 3 (Pin). Restore the fix. Record `harden_results.bug_line_mutation_confirmed: true`.
 
-Record `harden_results.arch_check`. Set `status: hardened`.
+Set `status: hardened`.
 
 ### Step 8 — Gap analysis ("why didn't we catch it?")
 
