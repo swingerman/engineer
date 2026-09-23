@@ -29,9 +29,10 @@ code quality itself (`refine`).
   with the default branch.
 - **Stage** (optional) — `refine`, `verify`, `harden`, or `any` (default). Limits
   the recommendations to that stage's tools.
-- **Prior results** (optional) — if a CP7 handoff exists, read its crap-analyzer
-  output. CRAP scores tell you where complex, poorly tested code is. Use them;
-  don't redo that analysis.
+- **Prior results** (optional) — if a CP7 handoff exists, read its
+  `crap_results` block (arch-check records crap-analyzer's output there). CRAP
+  scores tell you where complex, poorly tested code is. Use them; don't redo
+  that analysis.
 
 ## The toolbox
 
@@ -130,16 +131,37 @@ cost), highest first. Every `skip` row gives its reason. End with a one-line
 bottom line, e.g. "TLA+ on the retry loop is the highest-value check; mutation
 is next."
 
-## Let the human choose
+## Who decides: autonomy
 
-A table the human then has to answer in prose is a dead end. Finish by offering
-the recommendations as **selectable choices**, so acting on the advice takes
-one click. If nothing is recommended, say so and don't ask anything.
+Autonomy controls **who makes the call**, never which checks are sound. Use
+the effective autonomy from `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`:
+the feature's `autonomy_level`, capped by any `manifest.autonomy.path_overrides`
+that match the changed files. For a fix record, which has no `autonomy_level`,
+start from `manifest.autonomy.default_level` and apply the same path caps. A
+`critical` or `blocks_user: true` fix always counts as `low`.
+
+| Effective autonomy | Advisor behaviour |
+|---|---|
+| `high` | **Decides alone.** Every `recommend` row is selected and every drafted invariant is final. Show the table, then one line naming what will run and why ("Running TLA+ on get() and mutation on 1 file; skipped 4, reasons above"). Don't ask anything. |
+| `medium`, `low` | **Asks.** Offers the recommendations as choices (below). Nothing runs that the human didn't pick. |
+
+`manifest.harden.required: true` removes deselection, not the human. The
+recommended rows are mandatory, so Q1 isn't asked; list them as settled. Below
+`high` the human still confirms each invariant (Q2) and may add skipped checks
+(Q3).
+
+## The choices (below `high`)
+
+A table the human then has to answer in prose is a dead end. Offer the
+recommendations as **selectable choices**, so acting on the advice takes one
+click. If nothing is recommended and nothing was skipped, say so and don't ask
+anything.
 
 Use `AskUserQuestion`:
 
-- **Q1 "Which checks should I run?"** (`multiSelect: true`). Make one option
-  per `recommend` row, in value order, and mark the first `(Recommended)`.
+- **Q1 "Which checks should I run?"** (`multiSelect: true`). Skip Q1 when
+  `harden.required: true`. Make one option per `recommend` row, in value order,
+  and mark the first `(Recommended)`.
   - Label: `<tool> → <target>` (e.g. `TLA+ → get() retry loop`,
     `Mutation → ResidentialProxyHttpClient.php`).
   - Description: the why, the cost in minutes, and for TLA+/Lean the drafted
@@ -147,26 +169,27 @@ Use `AskUserQuestion`:
   - If there are more than 4 recommendations, fold the cheapest ones into a
     single option (`Introversion + arch-check`) so every expensive check keeps
     its own row.
-  - Skipped tools stay visible in the table. The human can still add one
-    through "Other" ("also run mutation").
+  - The human can add a skipped tool through "Other" ("also run mutation").
 - **Q2 (per recommended TLA+/Lean row) "Is this the right invariant for
   `<target>`?"** Offer:
   - `Use as drafted (Recommended)`
   - `Narrower: <a weaker variant>`
   - `Stronger: <a stricter variant>`
 
-  The built-in "Other" lets the human type their own. Ask one Q2 per TLA+/Lean
-  row, up to the tool's 4-question limit.
+  The built-in "Other" lets the human type their own.
+- **Q3 (only when `harden.required: true` and something was skipped) "Add any
+  of the skipped checks?"** (`multiSelect: true`). Make one option per `skip`
+  row, labelled with its skip reason.
+
+Keep to the tool's 4-question limit. If more questions are needed, prioritise
+Q2 for the most expensive formal rows.
 
 The output is the selected tools, each with its target and, for TLA+/Lean, the
-final invariant. Nothing runs that the human didn't pick.
+final invariant.
 
-**When not to ask:**
-- Under `/engineer.harden` at autonomy `high` with
-  `manifest.harden.formal: auto`, take every `recommend` row as selected.
-- Without an interactive human (subagent, headless), print the same choices as
-  a numbered list with a copy-pasteable reply line (`reply: "1,3" or "all"`)
-  and stop.
+**No interactive human** (subagent, headless): at `high`, decide as above.
+Below `high`, print the same choices as a numbered list with a copy-pasteable
+reply line (`reply: "1,3" or "all"`) and stop.
 
 When called by `harden`, also return the table as YAML (`advisor_picks:`) so
 harden can record it in `harden_results.advisor`.

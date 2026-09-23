@@ -1,6 +1,6 @@
 ---
 name: lean
-description: Triggers — "/engineer.lean". Write, edit, and verify Lean 4 proofs and definitions by running lake build / lean directly and iterating on compiler errors. Use whenever the user mentions Lean, Lean4, Mathlib, a .lean file, formal proofs, theorem proving, or asks to prove/verify a mathematical statement in a proof assistant. ALSO covers "use lean to verify <some real code/state machine>" — modeling a real codebase (SDK, TS/JS/Python/Go state machine, protocol handler, retry logic) as Lean 4 models, proving invariants against them, turning any counterexample into a reproduced failing test on the real code, and opening a draft PR that fixes it. Trigger on phrases like "verify the X state machine in lean", "prove X can't happen", "lean-verify this code", even without the word "proof". Also covers searching Mathlib for existing lemmas (exact?, apply?, loogle) instead of reproving them.
+description: Use to formally verify real code with Lean 4. Model a function or state machine as written, prove an invariant for every input, and reproduce any counterexample as a failing test. Dispatched by /engineer.harden for all-inputs invariants (parsers, maskers, money math, permission predicates); also usable directly. Triggers — "/engineer.lean", "use lean to verify X", "prove X can't happen", "lean-verify this code".
 ---
 
 # Lean
@@ -84,10 +84,13 @@ visibility into where you are, not just a final answer.
    write a test) against the actual implementation, and confirm the bug
    really happens there. A counterexample that doesn't reproduce means the
    model diverged from reality — fix the model, not the code.
-6. **For every confirmed bug, open a draft PR with a test that fails before
-   the fix and passes after.** That test *is* the proof the bug was real and
-   the fix works — state it in those terms (failing-before/passing-after),
-   not just "added a test."
+6. **For every confirmed bug, pin it with a test that fails before the fix
+   and passes after.** State it in those terms: the test is what proves the
+   bug was real and the fix works. Opening a PR is an external write. Propose
+   the draft PR and wait for the human's OK
+   (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`). When
+   `/engineer.harden` dispatched you, don't propose one: return the verdict and
+   the reproduction, and harden pins and fixes on the feature branch.
 7. **Track what's still open.** Some invariants won't be provable yet (need
    a stronger model, or the bug needs a design decision first) — say so
    explicitly as "held up: X" rather than silently dropping them.

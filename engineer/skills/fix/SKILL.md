@@ -13,9 +13,9 @@ Unlike ad-hoc fixes, the `fix` workflow enforces a regression spec that must be 
 
 - A bug report arrives (user report, Sentry alert, stack trace, regression in CI).
 - A defect needs a repeatable reproduction path and a tracked fix.
-- A regression must be proven to stay fixed (mutation gate).
+- A regression must be proven to stay fixed (the bug-line gate: the regression test must fail on the original bug).
 
-**Not for:** building a new capability (`/engineer.discuss` or `/engineer.feature-init`); adjusting an in-flight feature's scope (`/engineer.feature-edit`); reviewing recent changes without a defect (`/engineer.verify` or `/crap-analyzer`).
+**Not for:** building a new capability (`/engineer.discuss` or `/engineer.feature-init`); adjusting an in-flight feature's scope (`/engineer.feature-edit`); reviewing recent changes without a defect (`/engineer.arch-check` or `/crap-analyzer`).
 
 **Maintenance auto-invocation.** `fix` is the landing point of the SDLC's maintenance loop (`${CLAUDE_PLUGIN_ROOT}/references/intent.md`): a trigger — a Sentry/CI alert, a Slack message, or a schedule — can invoke it with no human at the start. Wire the trigger via the `schedule` skill (cron routines) or an external alert calling `claude -p "/engineer.fix <signal>"`; Step 1 synthesizes the bug intent from the signal/logs and the pipeline runs, surfacing to a human only at the review gates its `severity` + effective autonomy demand (a `critical` or user-blocking defect always confirms; low-severity internal ones can run further unattended). The external-write gate (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`) still applies — a maintenance run never merges/deploys on its own unless `verify: auto` + `dae_mergeready` clear it.
 
@@ -91,7 +91,7 @@ Run `engineer:arch-check` on each touched feature. Run `crap-analyzer` on the fi
 
 ### Step 7 — Harden (CP8 + CONFIRM-FIRST GATE 2)
 
-Run `/engineer.harden` in **fix mode** over the fix diff. It runs the refinement-advisor, the introversion pre-scan, mutation testing, any confirmed TLA+/Lean checks (a fix to a retry, race, or parser bug is a strong formal candidate), and the arch re-check. It records `harden_results.{advisor, introversion, mutation_score, formal, arch_check}` in this fix record.
+Run `/engineer.harden` in **fix mode** over the fix diff. It runs the refinement-advisor, then whichever of the introversion scan, mutation testing and TLA+/Lean checks the advisor recommends and effective autonomy approves, then the arch re-check. A fix to a retry, race or parser bug is a strong formal candidate. For a fix, a `critical` or user-blocking severity always asks the human. It records `harden_results.{advisor, introversion, mutation_score, formal, arch_check}` in this fix record.
 
 Then the fix-specific gate:
 
@@ -128,7 +128,7 @@ This is informational — the close step happens before merge, so cleanup can't 
 
 - Building a new feature → `/engineer.discuss` or `/engineer.feature-init`
 - Refining an in-flight feature's scope → `/engineer.feature-edit`
-- Reviewing recent changes without a defect → `/engineer.verify` or `/crap-analyzer`
+- Reviewing recent changes without a defect → `/engineer.arch-check`, `/crap-analyzer`, or `/engineer.refinement-advisor`
 
 ## References
 

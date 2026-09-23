@@ -14,8 +14,8 @@ A feature has **two** human decision gates, not one-per-checkpoint:
 | Gate | Where | What the human owns |
 |---|---|---|
 | **Front** | after CP4 (plan) | ACs + spec + architecture, reviewed **together, once** |
-| — middle — | CP5–7 (build / refine / harden) | **nothing** — deterministic gates + the gauntlet loop; the human *watches*, does not approve round-to-round |
-| **Back** | verify (CP7/CP8) | did it actually work |
+| — middle — | CP5–6 (build / refine) | **nothing** — deterministic gates + the gauntlet loop; the human *watches*, does not approve round-to-round |
+| **Back** | verify + harden (CP7/CP8) | did it actually work, and would the tests catch it breaking. CP8's check choice follows effective autonomy: at `high` the refinement-advisor decides alone |
 
 The middle is already autonomous at `medium`/`high` autonomy (see
 `handoff-dispatch.md`). This reference adds the **front-bundling**: today CP2
@@ -35,8 +35,10 @@ Two dials, carried on `feature.md` as `gate_profile: { front, verify }`:
   `bundled` (one human approval of ACs+spec+plan before CP5).
 - **`verify`** — `light` · `standard` · `heavy` · `auto`. Sets how hard the
   human validates at the back gate; feeds `validation_method` and `plan`'s Test
-  strategy depth. It never lowers the objective gates (acceptance + CRAP +
-  mutation always run) — it dials the *human's* attention. `auto` is the top
+  strategy depth. It never lowers the objective gates: acceptance + CRAP always
+  run, and CP8's mutation and formal checks run wherever the refinement-advisor
+  recommends them, with a recorded reason whenever one is skipped. It dials
+  the *human's* attention. `auto` is the top
   notch: **no human back gate — merge when the deterministic merge-readiness bar
   is green, else fall back to human.** See "verify: auto" below; it is never a
   size default.

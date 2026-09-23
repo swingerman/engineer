@@ -48,7 +48,7 @@ ROADMAP_OTHER_ACCESS = {"mcp", "cli", "api"}
 AUTONOMY_LEVELS = {"low", "medium", "high"}
 MUTATION_SCOPES = {"changed_files", "changed_module", "full"}
 MUTATION_CADENCES = {"per_pr", "per_merge", "per_release", "on_demand"}
-MUTATION_DEFAULTS = {"required", "opt_in"}
+HARDEN_REQUIRED_VALUES = {True, False}
 AGENTIC_SUMMARY_FORMATS = {"markdown"}
 IMPACT_ANALYSIS_VALUES = {"on", "off"}
 GIT_MANUAL_VALUES = {True, False}
@@ -356,7 +356,12 @@ def validate_manifest(manifest):
     _check_enum(errors, manifest, "tracker", "type", TRACKER_TYPES)
     _check_enum(errors, manifest, "mutation", "scope", MUTATION_SCOPES)
     _check_enum(errors, manifest, "mutation", "cadence", MUTATION_CADENCES)
-    _check_enum(errors, manifest, "mutation", "default_per_feature", MUTATION_DEFAULTS)
+    _check_enum(errors, manifest, "harden", "required", HARDEN_REQUIRED_VALUES)
+    mutation = manifest.get("mutation")
+    if isinstance(mutation, dict) and "default_per_feature" in mutation:
+        warnings.append("mutation.default_per_feature is no longer read — CP8 runs "
+                        "the checks the refinement-advisor recommends; set "
+                        "harden.required: true to make them mandatory")
     _check_enum(errors, manifest, "autonomy", "default_level", AUTONOMY_LEVELS)
     _check_enum(errors, manifest, "agentic_summary", "format", AGENTIC_SUMMARY_FORMATS)
     _check_enum(errors, manifest, "acceptance", "impact_analysis",

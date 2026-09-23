@@ -49,7 +49,7 @@ If a charter rule itself blocks a genuinely better design, surface it in the han
 
 ## Handoff
 
-Emit per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`. `agent_id` must differ from the implementer if checkpoint 6 is independence-gated. `checkpoint: 6`; `recommended_next`: "crap-analyzer for Light Verify".
+Emit per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`. `agent_id` must differ from the implementer if checkpoint 6 is independence-gated. `checkpoint: 6`; `recommended_next`: "/engineer.arch-check (CP7 Light Verify; it runs crap-analyzer too)".
 
 The handoff MUST include the `exit_criteria` block asserting each of Checkpoint 6's exit criteria (Foundation Design Section 8) with `verified_by`, `met`, and `evidence`. For `verified_by: tool` criteria, the evidence MUST be the tool's actual output. The checkpoint is marked done only when every criterion is met.
 

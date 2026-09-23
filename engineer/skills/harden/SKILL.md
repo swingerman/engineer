@@ -1,6 +1,6 @@
 ---
 name: harden
-description: Use after a feature passes Light Verify (CP7), to prove the tests actually catch bugs and, where the code warrants it, to formally check its invariants — Checkpoint 8. Runs the refinement-advisor, then the picked tools — introversion scan, mutation testing, and opt-in TLA+ / Lean verification. Triggers — "/engineer.harden", "harden this feature", "Checkpoint 8", "run mutation testing on the feature", "formally verify the feature".
+description: Use after a feature passes Light Verify (CP7), to prove the tests actually catch bugs and, where the code warrants it, to formally check its invariants — Checkpoint 8. Runs the refinement-advisor, then the picked tools — introversion scan, mutation testing, and opt-in TLA+ / Lean verification. Triggers — "/engineer.harden", "harden this feature", "Checkpoint 8", "which hardening does this need", "formally verify the feature".
 ---
 
 # harden
@@ -37,21 +37,21 @@ create one TodoWrite todo per step. See
 
 1. **Resolve + scope.** Resolve the root and manifest via
    `${CLAUDE_PLUGIN_ROOT}/scripts/dae_resolve.py`. Scope = changed code. Load
-   `acs.md`, `spec.md`, `CHARTER.md`, and the CP7 handoff, which carries the
-   crap-analyzer results.
+   `acs.md`, `spec.md`, `CHARTER.md`, and the CP7 handoff's `crap_results`
+   block (arch-check records crap-analyzer's output there). In fix mode, or if
+   the block is missing, run `crap-analyzer` on the scope first.
 2. **Advise.** Run `/engineer.refinement-advisor` with `stage: harden` over the
-   scope, passing it the CP7 crap-analyzer output. The advisor shows its table,
-   then asks the human to pick the checks and confirm each formal invariant (see
-   its *Let the human choose*).
+   scope, passing it `crap_results`. Effective autonomy decides who picks the
+   checks (see the advisor's *Who decides: autonomy*):
+   - at `high`, the advisor decides alone
+   - below `high`, it asks
+   - `manifest.harden.required: true` makes every recommended check mandatory
    - Steps 3–5 each run only if their tool was selected. An unselected step
      records `{skipped: <the advisor's reason, or "not selected">}` in its
      `harden_results` field, so the decision is visible, not silent.
-   - At autonomy `high` with `manifest.harden.formal: auto`, the advisor skips
-     the question and every `recommend` row runs.
 
-   The invariant is the part the human must own, because it states what must
-   never happen. Record the table and the selections in
-   `harden_results.advisor`.
+   Record the table, what was selected, and who decided (`decided_by: advisor |
+   human`) in `harden_results.advisor`.
 3. **Introversion pre-scan** (if selected). Run
    `${CLAUDE_PLUGIN_ROOT}/scripts/dae_introvert.py <methodology-root>`. It flags
    tests that can pass without asserting on SUT output. The script defers to
@@ -96,8 +96,8 @@ create one TodoWrite todo per step. See
    The `exit_criteria` block asserts:
    - the advisor ran, and every tool has a recorded verdict (selected, or
      skipped with a reason)
-   - if mutation was selected: score ≥ the manifest threshold
-     (`verified_by: tool`)
+   - if mutation was selected: score ≥ `quality_thresholds.mutation_score_min`
+     (`verified_by: tool`). Both are percentages, 0–100.
    - if introversion was selected: no unresolved confirmed vacuous tests
    - every selected formal check is `holds`, or its counterexample is fixed and
      pinned by a test that fails on the old code
@@ -109,9 +109,9 @@ create one TodoWrite todo per step. See
 
 ```yaml
 harden_results:
-  advisor: [{tool, verdict, target, why, invariant}]
+  advisor: {decided_by: advisor, rows: [{tool, verdict, target, why, invariant, selected}]}
   introversion: {status, flagged, confirmed_vacuous, fixed}
-  mutation_score: 0.87          # or {skipped: "config-only change"}
+  mutation_score: 87            # percent, 0–100; or {skipped: "config-only change"}
   formal:
     - {tool: tlaplus, target: "ResidentialProxyHttpClient::get", invariant: "attempt ≤ 3; every path exits",
        verdict: holds, bound_or_proof: "TLC exhaustive, 16 states", finding: "post-loop throw unreachable (advisory)"}

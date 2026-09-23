@@ -43,9 +43,12 @@ pin_confirmation:
 fix_commits:
   - "a1b2c3d fix: guard expired-token redirect in SessionMiddleware"
 
-harden_results:
-  mutation_score: 0.91                        # float 0–1 from atdd-mutate
-  arch_check: "pass"                          # pass | warn | fail + notes
+harden_results:                              # written by /engineer.harden (fix mode) + fix Step 7
+  advisor: {decided_by: human, rows: [{tool: atdd-mutate, verdict: recommend, target: "src/auth/session.py", selected: true}]}
+  introversion: {skipped: "no test files changed besides the regression spec"}
+  mutation_score: 91                          # percent 0–100 (quality_thresholds.mutation_score_min), or {skipped: "<reason>"}
+  formal: []                                  # [{tool, target, invariant, verdict, bound_or_proof, finding}]
+  arch_check: {status: clean}                 # {status: clean | violations, notes}
   bug_line_mutation_confirmed: true           # true once bug-line gate passes
 
 gap_analysis:

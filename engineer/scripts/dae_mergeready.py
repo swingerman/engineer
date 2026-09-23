@@ -18,6 +18,11 @@ import subprocess
 import sys
 
 import dae_resolve
+from dae_progress import CHECKPOINTS
+
+# The bar covers the whole pipeline, so a feature cannot auto-merge before its
+# last checkpoint (CP8 Harden) has a complete handoff.
+LAST_CP = str(CHECKPOINTS[-1][0])
 
 _SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 
@@ -103,7 +108,7 @@ def _ci_green(root, branch):
     return True, "CI green (%d checks)" % len(rollup)
 
 
-def gather(feature_dir, final_cp="7"):
+def gather(feature_dir, final_cp=LAST_CP):
     """Run every check → list of {name, ok, detail}. I/O lives here."""
     fm = _frontmatter_text(feature_dir)
     result = dae_resolve.resolve(feature_dir)
@@ -159,10 +164,10 @@ def main(argv):
     as_json = "--json" in args
     if as_json:
         args.remove("--json")
-    final_cp = "7"
+    final_cp = LAST_CP
     if "--final-cp" in args:
         i = args.index("--final-cp")
-        final_cp = args[i + 1] if i + 1 < len(args) else "7"
+        final_cp = args[i + 1] if i + 1 < len(args) else LAST_CP
         del args[i:i + 2]
     feature_dir = args[0]
     if not os.path.isdir(feature_dir):

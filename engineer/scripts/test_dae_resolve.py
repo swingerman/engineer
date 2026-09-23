@@ -49,7 +49,9 @@ quality_thresholds:
 mutation:
   scope: changed_files
   cadence: on_demand
-  default_per_feature: opt_in
+
+harden:
+  required: false
 
 verification:
   enforce_independence: true
@@ -193,6 +195,19 @@ class TestValidation(unittest.TestCase):
         errors, warnings = dr.validate_manifest(m)
         self.assertEqual(errors, [])
         self.assertTrue(any("9.9" in w for w in warnings))
+
+    def test_harden_required_must_be_bool(self):
+        m = dr.read_manifest(VALID_MANIFEST)
+        m["harden"]["required"] = "yes"
+        errors, _ = dr.validate_manifest(m)
+        self.assertTrue(any("harden.required" in e for e in errors))
+
+    def test_retired_mutation_default_warns(self):
+        m = dr.read_manifest(VALID_MANIFEST)
+        m["mutation"]["default_per_feature"] = "required"
+        errors, warnings = dr.validate_manifest(m)
+        self.assertEqual(errors, [])
+        self.assertTrue(any("harden.required" in w for w in warnings))
 
 
 class TestResolution(unittest.TestCase):

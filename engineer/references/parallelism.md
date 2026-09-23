@@ -96,8 +96,9 @@ stays sequential when this feature's N is small:
 |---|---|---|---|---|
 | onboard — discover features | modules × discovery angles | multi-modal sweep | 3 | economy |
 | refine — review changed code | files × dimensions | fan-out + adversarial charter-verify | 3 | inherit |
-| fix / atdd-mutate — harden | surviving mutants | loop-until-score | 3 | inherit |
-| fix — introversion confirm | flagged vacuous tests | fan-out + verify | 2/3 | economy |
+| harden (feature + fix mode) — mutation | surviving mutants | loop-until-score | 3 | inherit |
+| harden — introversion confirm | flagged vacuous tests | fan-out + verify | 2/3 | economy |
+| harden — formal checks | selected TLA+/Lean targets | fan-out, plain subagents (not fork-safe) | 3 | frontier |
 | consistency-check `--project` | features | fan-out (judgment checks) | 3 | economy |
 | progress-log `--project` | features → tracker | fan-out | 2/3 | economy |
 | plan — propose architecture | design angles (MVP / risk / reuse-first) | judge-panel → human picks | 2 | inherit |
