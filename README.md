@@ -215,7 +215,7 @@ pipeline and on the roadmap.
 
 | Plugin | Purpose | Version |
 |---|---|---|
-| **[`engineer`](engineer/)** | The DAE methodology kit — 24 skills, 25 guardrail scripts, the checkpoint pipeline | 0.32.1 |
+| **[`engineer`](engineer/)** | The DAE methodology kit — 24 skills, 6 role agents, 25 guardrail scripts, the checkpoint pipeline | 0.33.0 |
 | **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.4 |
 | **[`crap-analyzer`](crap-analyzer/)** | Change Risk Anti-Pattern analysis on changed code | 0.1.1 |
 
@@ -250,6 +250,24 @@ pipeline and on the roadmap.
 | `next` | Session-start survey — what to pick up now |
 | `express` | One-pass lane for XS changes: test, code, gates, PR |
 | `prototype` | Build first, then derive the criteria from what converged |
+
+</details>
+
+<details>
+<summary><b>6 role agents</b></summary>
+
+The skills dispatch these as `engineer:<name>`. Each one enforces its own tool
+limits (the reviewers have no edit tools) and turn cap. A project overrides a
+role by copying the file into its own `.claude/agents/`.
+
+| Agent | Role | Dispatched by |
+|---|---|---|
+| `reviewer` | one refine lens (reuse / quality / efficiency), read-only | `refine` |
+| `panel-adviser` | constructive gap-finder, bounded one-shot | `discover-acs`, `plan` |
+| `panel-advocate` | adversarial claim-falsifier | `discover-acs`, `plan` |
+| `gauntlet-critic` | one falsifiable gap vs the bar, never edits | `atdd:atdd-team` (gauntlet) |
+| `formal-verifier` | one TLA+/Lean target, no PR | `harden` |
+| `verifier` | independent CP7 verdict, writes only the handoff | `refine` → CP7 |
 
 </details>
 
@@ -479,6 +497,8 @@ it adapts the methodology.
 ├── skills/                  # atdd plugin skills (atdd, atdd-team, atdd-mutate)
 │
 ├── engineer/                # the DAE methodology kit
+│   ├── agents/              # 6 role agents (reviewer, panel-adviser/advocate,
+│   │                        #   gauntlet-critic, formal-verifier, verifier)
 │   ├── references/          # shared contracts — handoff, ontology, panel,
 │   │                        #   model classes, host capabilities, parallelism
 │   ├── scripts/             # dae_*.py guardrails + their unit tests

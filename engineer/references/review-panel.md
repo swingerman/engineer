@@ -63,6 +63,8 @@ its read set produces plausible-sounding fiction, which is worse than no review.
 
 ```
 description: <adviser|advocate> — <artifact> for <feature-slug>
+subagent_type: <engineer:panel-adviser | engineer:panel-advocate> (or the project
+        override; see host-capabilities.md, "Role agents")
 model: <frontier for adviser, inherit for advocate — classes, not product
         names; resolve against the Agent tool's live `model` enum>
 prompt:
@@ -90,6 +92,11 @@ prompt:
 ```
 
 ### Role openers
+
+The role agents (`agents/panel-adviser.md`, `agents/panel-advocate.md`) carry
+these openers as their system prompt, and they have no edit tools and a turn
+cap. When you dispatch them, skip the opener in the brief. Paste it only when
+you fall back to a general-purpose agent.
 
 **Adviser:**
 

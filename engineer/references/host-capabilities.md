@@ -39,6 +39,7 @@ fallback is a bug.
 
 | Capability | What DAE uses it for | Current binding | Degrades to |
 |---|---|---|---|
+| **role agents** | Recurring DAE roles with enforced tool limits and turn caps, so "don't edit" and "one-shot" are properties of the agent, not wishes in a prompt. | the plugin's `agents/` (`engineer:reviewer`, `engineer:panel-adviser`, `engineer:panel-advocate`, `engineer:gauntlet-critic`, `engineer:formal-verifier`, `engineer:verifier`), dispatched as the Agent tool's `subagent_type` | A general-purpose agent whose brief pastes the role body from `agents/<name>.md`. The same discipline, but enforced by prose only. |
 | **progress-surface** | The live in-skill step tracker (Indicator 2) | TodoWrite | Print the step list once at the start, and say which step you're on as you go. |
 | **structured-ask** | Batched multiple-choice questions — the AC coverage checklists, autonomy prompts | AskUserQuestion | Ask in prose, one batched message. |
 | **orchestrate** | Large-N or quality-pattern fan-out (parallelism Tier 3) | the Workflow tool | Tier 2 parallel agents, then Tier 1 sequential. Already specified in `parallelism.md`. |
@@ -47,6 +48,25 @@ fallback is a bug.
 | **peer-message** | A dispatched agent reporting back mid-run to a named parent | SendMessage | The agent's final text as its return value — which is why the reporting contract names the channel explicitly. |
 | **tool-channel** | Reaching trackers, roadmaps, issue systems | MCP servers | The driver-preflight fallback: a CLI, an API, or `type: none`. Already specified in `tracker.md` / `roadmap.md`. |
 | **render** | Publishing a rendered, shareable view — see below | Artifacts | Terminal text. Always the default. |
+
+## Role agents — plugin default, project override
+
+The plugin ships one agent per recurring role. They're project-agnostic: each
+carries the posture, its tool limits and its output shape. Project specifics
+(charter, stack, run commands, read set) still travel in the brief, so the
+agent definitions stay generic.
+
+- **Model.** Every role agent says `model: inherit`. Pass the class-resolved
+  `model` on each dispatch (`model-classes.md`); a per-dispatch model beats the
+  frontmatter. Never pin a product name in an agent file.
+- **Overriding.** Plugin agents have the lowest precedence. A project that needs
+  a different posture (extra tools, a stricter reviewer) copies
+  `agents/<name>.md` into its own `.claude/agents/`, keeps the `name`, and
+  edits it. When dispatching a role, use the project's `<name>` if
+  `.claude/agents/<name>.md` exists, else `engineer:<name>`. `onboard` does not
+  scaffold overrides; add one only when the charter asks for it.
+- **Limits.** Plugin agents ignore `hooks`, `mcpServers` and `permissionMode`.
+  A role that needs any of those must be a project override.
 
 ## `render` — the one worth reaching for
 

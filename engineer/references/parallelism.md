@@ -33,6 +33,11 @@ If none fire → sequential, silently. No offer, no noise.
 ## Skip-gate — stay sequential, say nothing
 
 - Scalar work, or N < 2.
+- Coding units that share context (the same module, the same types, one
+  refactor). Multi-agent runs cost roughly 15× the tokens of a single chat, and
+  Anthropic's research-system write-up names shared-context coding as a poor
+  fit for them. Parallel *read-only review* of the same code is the exception:
+  the lenses don't share state.
 - Units depend on each other (each needs the previous result).
 - A human sign-off splits the units (AC approval, plan architecture confirm,
   charter sign-off). Workflows take **no mid-run human input**, so any fan-out
@@ -46,7 +51,7 @@ If none fire → sequential, silently. No offer, no noise.
 | Tier | Substrate | When |
 |---|---|---|
 | 1 | one agent, sequential | skip-gate hit (the default) |
-| 2 | `superpowers:dispatching-parallel-agents` | small fixed fan-out (≈2–6), results fit context |
+| 2 | several Agent-tool calls **in one message** (a plugin role agent from `agents/` when one fits — see `host-capabilities.md`) | small fixed fan-out (≈2–6), results fit context |
 | 3 | the **Workflow tool** (dynamic workflow) | large N, or a quality pattern (verify / judge-panel / loop-until) |
 
 Workflows are paid-plan + version-gated and may be off. Unavailable → **degrade**
@@ -85,7 +90,14 @@ the "don't bounce mechanical decisions to the human" principle both live in
 One-line offer shape:
 
     This step decomposes over <N> <units> (<why independent>).
-    Recommended: <tier>.  [proceed] / sequential / parallel / workflow
+    Recommended: <tier> — est. <N> agents × <read set per agent>.
+    [proceed] / sequential / parallel / workflow
+
+The cost line isn't decoration. Multi-agent runs cost roughly 15× the tokens of
+a single chat, so the human should see what they're buying. Each returned
+result also lands in the orchestrator's context. The reporting contract in
+`handoff-dispatch.md` caps every reply at ~1,500 tokens so a fan-out can't
+flood it.
 
 ## Common shapes — priors, not a contract
 
