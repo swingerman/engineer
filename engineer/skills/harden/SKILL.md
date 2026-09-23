@@ -63,7 +63,8 @@ create one TodoWrite todo per step. See
    carries a surviving mutant, it is almost certainly vacuous. Record
    `harden_results.mutation_score`.
 5. **Formal checks** (selected TLA+/Lean rows only). Dispatch one **plain subagent**
-   (default isolation, **not a fork**) per pick: `/engineer.tlaplus` for
+   (default isolation, **not a fork**) per pick, `subagent_type:
+   engineer:formal-verifier` (or the project override): `/engineer.tlaplus` for
    interleaving/state-machine targets, `/engineer.lean` for all-inputs targets. Each
    brief gives:
    - the target function (file:line)

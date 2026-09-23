@@ -109,6 +109,7 @@ inside one. See `${CLAUDE_PLUGIN_ROOT}/references/parallelism.md` (Fork safety).
 
 ```
 description: gauntlet critic round <N> — <feature-slug>
+subagent_type: engineer:gauntlet-critic   (enforces rule 5: it has no edit tools)
 model: <inherit; frontier when the bar is visual/qualitative — classes, not
         product names, resolved against the Agent tool's live `model` enum>
 prompt:

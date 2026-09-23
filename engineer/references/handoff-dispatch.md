@@ -93,6 +93,9 @@ When you do dispatch via the Agent tool, use this shape:
 
 ```
 description: <Checkpoint N for <feature-slug>>
+subagent_type: <a DAE role agent when one fits — engineer:reviewer,
+        engineer:verifier, … (see host-capabilities.md, "role agents") — else
+        omit for a general-purpose agent>
 model: <economy | inherit | frontier — a class, not a product name;
         resolve against the Agent tool's live `model` enum at dispatch time.
         See references/model-classes.md>
@@ -138,10 +141,17 @@ delivery instruction spelled out:
     Your final text is the return value, not a message to a human. It is not
     visible to the parent session unless you deliver it through the channel
     named here: <SendMessage to "<parent-id>" | your final text (Agent-tool
-    subagent)>. Deliver before you finish, even if brief or partial. If you did
+    subagent)>. Deliver before you finish, even if brief or partial. Keep it
+    under ~1,500 tokens: findings and verdicts, not narration. If you wrote a
+    handoff or report file, put the detail there and return its path. If you did
     not actually do the work described, say so plainly rather than
     reconstructing something plausible — downstream artifacts will be edited
     based on what you report.
+
+The size cap follows Anthropic's context-engineering guidance: a subagent hands
+back a condensed summary (typically 1,000–2,000 tokens), and the detail lives in
+a file. Without the cap, one fan-out of reviewers can fill the orchestrator's
+context with transcripts.
 
 The last sentence matters as much as the first: a plausible reconstruction from
 an agent that never ran the investigation is worse than an empty report, because
