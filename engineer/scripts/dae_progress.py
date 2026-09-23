@@ -18,7 +18,7 @@ import dae_delegable
 import dae_handoff
 
 # The canonical DAE pipeline — the single source of truth for stage order and
-# names. CP5 (Implement) and CP8 (Harden) are stops with no dedicated skill.
+# names. CP5 (Implement) is a stop with no dedicated engineer skill.
 CHECKPOINTS = [
     (0, "Onboard"), (1.5, "Ready"), (2, "ACs"), (3, "Spec"), (4, "Plan"),
     (5, "Implement"), (6, "Refine"), (7, "Verify"), (8, "Harden"),

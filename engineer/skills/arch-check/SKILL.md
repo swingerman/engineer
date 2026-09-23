@@ -72,6 +72,7 @@ the source of truth — see `engineer/skills/plan/references/runbook-template.md
 Emit a summary per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`.
 `checkpoint: 7`; the `exit_criteria` block asserts the architecture-fitness
 criterion with `verified_by: tool` and the `dae_arch.py` exit status as evidence.
+`recommended_next`: "/engineer.harden (CP8)".
 
 ## References
 
