@@ -54,7 +54,7 @@ FEATURE = {
     7: (["/engineer.arch-check", "/crap-analyzer"], "review", "review",
         "Verify the work against the charter. You did not implement this; do "
         "not defend it."),
-    8: (["/engineer.harden"], "none", "shipping",
+    8: (["/engineer.harden"], "none", "decision",
         "Harden: check the tests actually fail when the code is wrong, and "
         "formally check the invariants the advisor says are worth it."),
 }
@@ -158,6 +158,11 @@ FIX_STAGES = [
      "Reproduce it, ideally as a failing test. Stop and show the failure."),
     ("fixed", "Fixed", "It passes, and the suite still does.", "none", "decision",
      "Fix it. The reproduction is what says you are done."),
+    ("hardened", "Hardened", "The tests would catch it again.", "none",
+     "decision",
+     "Harden the fix with /engineer.harden in fix mode: run the checks the "
+     "advisor recommends and you pick, then prove the regression test fails "
+     "on the original bug line."),
     ("gap_closed", "Gap closed", "Why the tests let it through.", "review",
      "shipping",
      "Answer why this was not caught — missing criterion, missing spec, or "
@@ -212,7 +217,10 @@ def lifecycles():
             "label": "DAE fix",
             "blurb": "A defect through reproduction, fix, and why it was not caught.",
             "stages": [
-                stage(s, label, ["/engineer.fix"], gate, attention, pick_up, blurb)
+                stage(s, label,
+                      ["/engineer.fix", "/engineer.harden"] if s == "hardened"
+                      else ["/engineer.fix"],
+                      gate, attention, pick_up, blurb)
                 for s, label, blurb, gate, attention, pick_up in FIX_STAGES
             ],
         },

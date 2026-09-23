@@ -5,6 +5,11 @@ import unittest
 import dae_mergeready as mr
 
 
+class TestFinalCheckpoint(unittest.TestCase):
+    def test_bar_covers_harden(self):
+        self.assertEqual(mr.LAST_CP, "8")
+
+
 class TestEvaluate(unittest.TestCase):
     def test_all_green_is_ready(self):
         checks = [{"name": "a", "ok": True, "detail": ""},

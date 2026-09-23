@@ -1,6 +1,6 @@
 ---
 name: tlaplus
-description: Triggers — "/engineer.tlaplus". Write TLA+ specifications and check them with the TLC model checker, or translate an informal system/protocol design (state machine, distributed protocol, concurrency design) into a TLA+ spec with invariants. Use whenever the user mentions TLA+, TLC, PlusCal, model checking, a .tla/.cfg file, or wants to formally verify a protocol/state machine/concurrent algorithm for safety or liveness bugs before implementing it. ALSO covers "use TLA+ to verify <some real code/state machine>" — modeling a real codebase (SDK, TS/JS/Python/Go state machine, retry logic, concurrent/distributed protocol) as TLA+ specs, model-checking invariants with TLC, turning any counterexample trace into a reproduced failing test on the real code, and opening a draft PR that fixes it. Trigger on phrases like "verify the X state machine with TLA+", "model-check X for races/deadlocks", "TLA+-verify this code", even without the word "spec".
+description: Use to model-check real code or a design with TLA+ and TLC. Model retries, locks, async flows, protocols or state machines as written, check invariants over every interleaving, and reproduce any counterexample trace as a failing test. Dispatched by /engineer.harden for concurrency- and ordering-shaped risks; also usable directly, including to spec a design before building it. Triggers — "/engineer.tlaplus", "use TLA+ to verify X", "model-check X for races/deadlocks", "write a TLA+ spec for this protocol".
 ---
 
 # TLA+
@@ -11,8 +11,9 @@ uncompiled/unchecked spec is just prose with extra syntax.
 
 ## Setup check
 
-`java -version` (TLC needs a JVM — already present on this machine). The
-model checker jar (`tla2tools.jar`) auto-downloads on first run via
+`java -version` (TLC needs a JVM 11+; if it's missing, tell the user rather than
+installing one). The model checker jar (`tla2tools.jar`, pinned to v1.7.4)
+auto-downloads on first run via
 `${CLAUDE_PLUGIN_ROOT}/skills/tlaplus/scripts/tlc.sh`, no separate install step needed.
 
 ## Translating an informal design into TLA+
@@ -92,9 +93,13 @@ list and post progress as you go — this runs long.
    confirm it against the actual implementation (a test, a script forcing
    the interleaving, or a careful read of the code path). If it doesn't
    reproduce, the model diverged from reality — fix the model, not the code.
-6. **For every confirmed bug, open a draft PR with a test that fails before
-   the fix and passes after.** State it in those terms — the test is what
-   proves the bug was real and the fix works.
+6. **For every confirmed bug, pin it with a test that fails before the fix
+   and passes after.** State it in those terms: the test is what proves the
+   bug was real and the fix works. Opening a PR is an external write. Propose
+   the draft PR and wait for the human's OK
+   (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`). When
+   `/engineer.harden` dispatched you, don't propose one: return the verdict and
+   the reproduction, and harden pins and fixes on the feature branch.
 7. **Track what's still open** ("held up: X") rather than silently dropping
    an invariant you couldn't get TLC to finish checking.
 8. **Flag model/reality disagreement as provisional.** If a model's

@@ -63,7 +63,7 @@ steps frontmatter is the machine-readable source of truth for the gate logic.
 
 ## Gate enforcement
 
-Deploy-related ACs MUST NOT claim green until every step in their `blocking_acs` reverse-lookup is `completed: true`. `engineer:verify` will surface this as a gap; `dae_handoff.py` will refuse to mark the CP7 checkpoint complete if any blocked AC is asserting `met: true` while its blocking runbook steps are open.
+Deploy-related ACs MUST NOT claim green until every step in their `blocking_acs` reverse-lookup is `completed: true`. `/engineer.arch-check` (Step 3.5) will surface this as a gap; `dae_handoff.py` will refuse to mark the CP7 checkpoint complete if any blocked AC is asserting `met: true` while its blocking runbook steps are open.
 
 Use `dae_runbook.py status <feature-dir>` (if available; otherwise grep) to see what's open vs done.
 

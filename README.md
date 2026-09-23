@@ -215,14 +215,14 @@ pipeline and on the roadmap.
 
 | Plugin | Purpose | Version |
 |---|---|---|
-| **[`engineer`](engineer/)** | The DAE methodology kit — 18 skills, 21 guardrail scripts, the checkpoint pipeline | 0.21.0 |
-| **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.2 |
+| **[`engineer`](engineer/)** | The DAE methodology kit — 24 skills, 25 guardrail scripts, the checkpoint pipeline | 0.32.1 |
+| **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.4 |
 | **[`crap-analyzer`](crap-analyzer/)** | Change Risk Anti-Pattern analysis on changed code | 0.1.1 |
 
 ### `engineer` — the methodology kit
 
 <details>
-<summary><b>All 18 skills</b></summary>
+<summary><b>All 24 skills</b></summary>
 
 | Skill | Role |
 |---|---|
@@ -234,7 +234,11 @@ pipeline and on the roadmap.
 | `atdd` | CP3 entry point — bridges into `atdd:atdd` |
 | `plan` | Architecture plan + Charter Check → `plan.md` (CP4) |
 | `refine` | Parallel reuse / quality / efficiency review (CP6) |
-| `arch-check` | Architecture fitness — layering, cycles, naming, size (CP7) |
+| `arch-check` | Architecture fitness + CRAP analysis — layering, cycles, naming, size (CP7) |
+| `harden` | Runs the checks the refinement-advisor recommends: introversion, mutation, TLA+/Lean (CP8) |
+| `refinement-advisor` | Recommends which refine/verify/harden checks fit a diff; decides alone at high autonomy |
+| `tlaplus` | Model-check real code or a design with TLA+/TLC; counterexample → failing test |
+| `lean` | Prove an all-inputs invariant of real code in Lean 4; counterexample → failing test |
 | `fix` | Bug lifecycle, with a "why didn't we catch it?" gap analysis |
 | `reorient` | Mid-task re-anchoring after compaction or a long run |
 | `clarify` | Single-artifact ambiguity resolution |
@@ -244,6 +248,8 @@ pipeline and on the roadmap.
 | `session-summary` | Per-session `session-log.md` entry |
 | `post-merge` | Branch cleanup + state reconcile after a merge |
 | `next` | Session-start survey — what to pick up now |
+| `express` | One-pass lane for XS changes: test, code, gates, PR |
+| `prototype` | Build first, then derive the criteria from what converged |
 
 </details>
 
@@ -476,7 +482,7 @@ it adapts the methodology.
 │   ├── references/          # shared contracts — handoff, ontology, panel,
 │   │                        #   model classes, host capabilities, parallelism
 │   ├── scripts/             # dae_*.py guardrails + their unit tests
-│   ├── skills/              # the 18 engineer skills
+│   ├── skills/              # the 24 engineer skills
 │   └── examples/            # optional host hook configs
 │
 └── crap-analyzer/           # change-risk analysis plugin

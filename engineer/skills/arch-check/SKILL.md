@@ -47,6 +47,14 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_arch.py <methodology-root>` (add `--full`
 for a whole-project audit). If it reports "no `architecture:` section", tell the
 user the charter has no machine-readable architecture rules yet and stop.
 
+### Step 1.5 — CRAP analysis
+
+CP7 Light Verify is arch-check **plus** `crap-analyzer`. If crap-analyzer hasn't
+run on the current diff, run it now over the feature's changed code. Keep its
+summary for the handoff: max CRAP, the offenders over
+`quality_thresholds.crap_max`, and the command. It is external and writes no
+handoff of its own, so this is where CP8's refinement-advisor reads it.
+
 ### Step 2 — Present violations
 
 Group the violations by kind (layering first — it is the architectural-vision
@@ -71,7 +79,10 @@ the source of truth — see `engineer/skills/plan/references/runbook-template.md
 
 Emit a summary per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`.
 `checkpoint: 7`; the `exit_criteria` block asserts the architecture-fitness
-criterion with `verified_by: tool` and the `dae_arch.py` exit status as evidence.
+criterion with `verified_by: tool` and the `dae_arch.py` exit status as evidence,
+and carries crap-analyzer's summary as a `crap_results` block (`max_crap`,
+`offenders: [{symbol, file, crap, coverage}]`, `command`). CP8's harden and
+refinement-advisor read that block.
 `recommended_next`: "/engineer.harden (CP8)".
 
 ## References
