@@ -41,23 +41,13 @@ more: **CP2** (AC approval) | **CP3 → CP4**. The architecture confirm inside C
 comes back as a `DECISION` from the plan node, and the coordinator asks the
 human and continues the node.
 
-Gate behaviour follows `gate_profile` (`${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md`):
-
-- `front: auto` → no front gate. The coordinator continues into the middle
-  segment without stopping. The boundary still exists; nothing waits at it.
-- `front: bundled` → one stop after CP4 (rendered as a choice point).
-- No `gate_profile` → today's per-checkpoint gates: stop after CP2 for AC
-  approval and at CP4 for the architecture, as the skills do standalone. The
-  graph records `front: per-checkpoint`.
-- `autonomy_level: low` → per-checkpoint gates **and** confirm every dispatch.
-  `low` overrides the front dial (safety wins).
-- `verify:` sets how much the human checks at the back gate. `verify: auto`
-  skips the back gate when `dae_mergeready.py` is green, under the guardrails in
-  `gate-profile.md`.
-
-The external-write gate does not change: pushing, opening or merging a PR, and
-posting comments always ask. The one exception is the `verify: auto` carve-out
-in `handoff-dispatch.md`.
+Whether anyone actually waits at a boundary is decided by `gate_profile` and
+`autonomy_level`, exactly as in `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md`.
+Under `front: auto` nothing waits at the front boundary; under `verify: auto` a
+green `dae_mergeready.py` replaces the back gate. Record the effective front as
+`front: bundled | auto | per-checkpoint` in the graph, because `dae_graph.py`
+derives the gate positions from it. The external-write gate in
+`handoff-dispatch.md` does not change.
 
 ## The run
 
@@ -110,8 +100,8 @@ For each segment, in order:
    dispatch: one node at a time for a Chain (Tier 1), several Agent calls in one
    message for a small fan-out (Tier 2). Invoking `/engineer.run` is the opt-in
    for the Workflow tool, and the proposal has already shown its cost.
-2. **Ensure infrastructure** the node needs (`dae_infra.py ensure`, per
-   `handoff-dispatch.md`) before dispatching it. **Dispatch each node** with the
+2. **Ensure infrastructure** once per segment (`dae_infra.py ensure`, per
+   `handoff-dispatch.md`), and again only after a failure. **Dispatch each node** with the
    brief template below. Assign the node's
    `agent_id` yourself, `run-<node-id>-<attempt>`, and put it in the brief. IDs
    are distinct per node by construction, so the refiner can never share an id
@@ -126,14 +116,18 @@ For each segment, in order:
    yielded loop (the gauntlet) runs under the node's declared cap, and you count
    the rounds.
 4. **After each node returns**, check the outside evidence before anything else:
-   - the handoff exists, `status: complete`, every `exit_criteria` met:
-     `dae_handoff.py <feature-dir> --through <cp>` (this also enforces
-     Principle 7: the CP6 agent differs from CP5, and CP7/CP8 differ from both);
-   - `dae_ontology.py <feature-dir>` is clean;
+   - `dae_handoff.py <feature-dir> --through <cp>`: the handoff exists, is
+     complete, every criterion is met, and Principle 7 holds (CP6 ≠ CP5,
+     CP7/CP8 ≠ both);
    - for a fan-out node, the `verified_by: tool|human` check named in the graph
      actually ran. A test run counts; another agent's opinion does not.
-5. **Record the actual result** under `actual:` in `run-graph.yml`: node,
-   agent_id, status, rounds, tokens and minutes when the host reports them.
+
+   Run `dae_ontology.py <feature-dir>` once per segment, before its gate.
+   Its Principle 7 check repeats the handoff gate, so running it per node adds
+   nothing.
+5. **Record the actual result** for each node (node, agent_id, status, rounds,
+   tokens and minutes when the host reports them). Write them under `actual:` in
+   `run-graph.yml` once per segment, not per node.
 6. **Tracker sync** is not the coordinator's job. The engineer mods plugin's
    handoff-write hook does it. You can tell the hook ran because `progress.md`
    has already absorbed the new handoff. If it has not, dispatch an `economy`
@@ -178,7 +172,10 @@ For each remaining checkpoint, in this order:
 4. **Name the outside evidence** for every fan-out: which tool run, or which
    human gate.
 5. **Declare the cap** for every loop (see below).
-6. **Pick the model class** per node (see below).
+6. **Pick the model class** per node with the three questions in
+   `${CLAUDE_PLUGIN_ROOT}/references/model-classes.md`. Record the class, never a
+   product name. Resolve it against the Agent tool's live `model` enum at
+   dispatch. `dae_graph.py` rejects product names, and `frontier` on a loop.
 
 **Yield nodes.** A panel, a set of lenses, a gauntlet critic or a set of formal
 checks is a node with `yield_of: <parent-id>`. Its shape, class, cap and outside
@@ -199,38 +196,24 @@ Per-checkpoint priors, re-derived every run:
 | 7 | verify | Star of tools | `engineer:verifier` |
 | 8 | harden | Branch (the advisor), then a Diamond of the picked tools | `/engineer.harden`; `engineer:formal-verifier` |
 
-## Loop caps and the no-progress stop
+## Loop caps
 
-Every Loop or Feedback node in the graph carries `max_rounds` and `no_progress`,
-and `dae_graph.py` refuses the graph without them.
+The rule is in `graph-shapes.md`. These are the numbers each loop declares:
 
 | Loop | `max_rounds` | `no_progress` |
 |---|---|---|
 | CP5 green loop | 2 × acceptance tests failing at the start | `stuck_loop_threshold` rounds with no test turning green |
-| CP5 gauntlet | `gauntlet.max_rounds` (default 5) | the same gap twice |
+| CP5 gauntlet | per `gauntlet.md` | per `gauntlet.md` |
 | CP8 kill mutants | survivors at the start | a round kills nothing |
 | Node retry (failure handling) | 1 | — (a retry is a single attempt) |
 
-When a loop stops on its cap or on no-progress, the node's handoff carries
-`human_action_needed: yes`. The coordinator stops the segment and surfaces the
-open item. It never starts a second loop over the same work to get around a
-cap.
-
-## Model-class resolution
-
-Assign a class (`economy` / `inherit` / `frontier`) per node, using the three
-questions in `${CLAUDE_PLUGIN_ROOT}/references/model-classes.md`: mechanical →
-`economy`, bounded one-shot judgment → `frontier`, everything else → `inherit`.
-The graph records the class. Resolve it against the Agent tool's live `model`
-enum at dispatch, never earlier. Product names never appear in
-`run-graph.yml`, and `dae_graph.py` rejects them. `frontier` never goes on a
-Loop node (`dae_graph.py` rejects that too): putting the top class in an agentic
-loop is the cost failure `model-classes.md` describes.
+When a loop is capped, stop the segment. Never start a second loop over the same
+work to get around the cap.
 
 ## Estimates
 
-The estimates are priors. You calibrate them against `actual:` from earlier
-runs in this repo (read other features' `run-graph.yml` when there are any):
+The estimates are priors. Calibrate them against `actual:` in the last two or
+three features' `run-graph.yml`, not all of them:
 
 - **tokens** = Σ over nodes of (agents × per-agent prior). Rough priors are
   20–50k for an `economy` script-wrapper, 100–300k for an `inherit` skill node,
@@ -386,7 +369,10 @@ actual: []
 ```
 
 Block YAML only (no `{…}` flow maps); `dae_graph.py` reads it with the kit's
-stdlib parser. This file is how the proposal can be compared with the actual run
+stdlib parser. The validator reads `front`, the segments, and per node `id`,
+`cp`, `yield_of`, `shape`, `model`, `max_rounds`, `no_progress` and
+`verified_by`. Everything else (`role`, `tier`, `estimate`, `reshapes`,
+`actual`) is the record a human compares afterwards. This file is how the proposal can be compared with the actual run
 afterwards.
 
 ## References

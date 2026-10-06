@@ -41,19 +41,9 @@ project's features / modules), not the step in the abstract:
 
 If 1–3 do not fire → sequential (a **Chain**), silently. No offer, no noise.
 
-## Two rules the reflex enforces
-
-- **Loop rule.** Every Loop or Feedback shape declares a `max_rounds` cap and a
-  no-progress stop (two consecutive rounds with the same outcome). A loop
-  without both fails the reflex, the same way an unbounded fan-out would. Loops
-  with a human in them are exempt, because the human is the cap.
-- **Outside evidence.** Something outside a Fan-out, Diamond, Star or Tree must
-  check its results: `verified_by: tool` or `verified_by: human`. A plan whose
-  only check of a fan-out is another agent inside the same fan-out fails the
-  reflex. Name the outside check (the test run, the script, the human gate)
-  when you pick the shape.
-
-Full statement of both: `${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md`.
+**The reflex fails** a loop with no cap or no no-progress stop, and a fan-out
+whose results nothing outside the fan-out checks. Both rules are in
+`${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md` ("Three rules").
 
 ## Skip-gate — stay sequential, say nothing
 

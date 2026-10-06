@@ -22,24 +22,23 @@ Usage:
 import json
 import sys
 
+import dae_ontology
 import dae_resolve
 
 SHAPES = {"chain", "branch", "fan-out", "fan-in", "diamond", "star", "tree",
           "loop", "feedback", "dag"}
 LOOPS = {"loop", "feedback"}
 FANS = {"fan-out", "diamond", "star", "tree"}
-MODEL_CLASSES = {"economy", "inherit", "frontier"}
-OUTSIDE = {"tool", "human"}
-# Gate boundaries: a segment's checkpoints all fall in one band.
-BANDS = ((2, 3, 4), (5, 6, 7, 8))
-PER_CHECKPOINT_BANDS = ((2,), (3, 4), (5, 6, 7, 8))
+MODEL_CLASSES = {"economy", "inherit", "frontier"}   # references/model-classes.md
+OUTSIDE = {"tool", "human"}   # handoff verified_by values, minus `judgment`
+RUN_CHECKPOINTS = {cp for cp in dae_ontology.CHECKPOINTS if cp >= 2}
+# Human gates sit after these checkpoints; a segment never contains one.
+GATES = {4}
+PER_CHECKPOINT_GATES = {2, 4}
 
 
-def _band(cp, bands):
-    for i, band in enumerate(bands):
-        if cp in band:
-            return i
-    return None
+def _int(v):
+    return isinstance(v, int) and not isinstance(v, bool)
 
 
 def check(graph):
@@ -48,23 +47,21 @@ def check(graph):
     segments = graph.get("segments") if isinstance(graph, dict) else None
     if not isinstance(segments, list) or not segments:
         return ["no segments"]
-    gate_bands = PER_CHECKPOINT_BANDS if graph.get("front") == "per-checkpoint" else BANDS
+    gates = PER_CHECKPOINT_GATES if graph.get("front") == "per-checkpoint" else GATES
     for si, seg in enumerate(segments):
         if not isinstance(seg, dict):
             errors.append("segment %d: not a mapping" % si)
             continue
         name = seg.get("name", "segment %d" % si)
         cps = seg.get("checkpoints")
-        if not isinstance(cps, list) or not cps or \
-                not all(isinstance(cp, int) and not isinstance(cp, bool) for cp in cps):
+        if not isinstance(cps, list) or not cps or not all(_int(cp) for cp in cps):
             errors.append("%s: checkpoints must be a list of integers" % name)
             continue
-        bands = {_band(cp, gate_bands) for cp in cps}
-        if None in bands:
+        if not set(cps) <= RUN_CHECKPOINTS:
             errors.append("%s: checkpoint outside CP2-CP8 in %s" % (name, cps))
-        elif len(bands) > 1:
-            errors.append("%s: spans a human gate (%s) — gate bands are %s"
-                          % (name, cps, [list(b) for b in gate_bands]))
+        elif len({sum(g < cp for g in gates) for cp in cps}) > 1:
+            errors.append("%s: spans a human gate (%s) — gates sit after CP%s"
+                          % (name, cps, sorted(gates)))
         nodes = seg.get("nodes")
         if not isinstance(nodes, list) or not nodes or \
                 not all(isinstance(n, dict) for n in nodes):
@@ -81,16 +78,17 @@ def check(graph):
             shape = node.get("shape")
             if shape not in SHAPES:
                 errors.append("%s: unknown shape %r" % (nid, shape))
-            if node.get("model", "inherit") not in MODEL_CLASSES:
+            model = node.get("model", "inherit")
+            if model not in MODEL_CLASSES:
                 errors.append("%s: model %r is not a class (economy|inherit|frontier)"
-                              % (nid, node.get("model")))
+                              % (nid, model))
             if shape in LOOPS:
                 cap = node.get("max_rounds")
-                if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
+                if not _int(cap) or cap < 1:
                     errors.append("%s: loop without a max_rounds cap" % nid)
                 if not node.get("no_progress"):
                     errors.append("%s: loop without a no_progress stop" % nid)
-                if node.get("model") == "frontier":
+                if model == "frontier":
                     errors.append("%s: frontier on a loop — use inherit" % nid)
             if shape in FANS and node.get("verified_by") not in OUTSIDE:
                 errors.append("%s: %s not verified from outside the fan-out "

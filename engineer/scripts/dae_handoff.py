@@ -119,6 +119,7 @@ def _all_records(feature_dir):
 # (also authorship), CP7/CP8 verify. A checkpoint's handoff agent_id must
 # differ from every author checkpoint listed against it.
 _INDEPENDENT_OF = {6: (5,), 7: (5, 6), 8: (5, 6)}
+_AUTHOR_CPS = {cp for authors in _INDEPENDENT_OF.values() for cp in authors}
 
 
 def independence_violations(feature_dir):
@@ -132,7 +133,7 @@ def independence_violations(feature_dir):
     records = _all_records(feature_dir)
     authors = {}
     for _, rec in records:
-        if rec["checkpoint"] in (5, 6) and rec["agent_id"]:
+        if rec["checkpoint"] in _AUTHOR_CPS and rec["agent_id"]:
             authors.setdefault(rec["checkpoint"], rec["agent_id"])
     violations = []
     for fname, rec in records:

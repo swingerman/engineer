@@ -150,8 +150,6 @@ prompt:
 
   Constraints:
   - You are the fresh agent the charter §6 calls for; do NOT relax independence.
-  - (Under /engineer.run only) coordinated: true; agent_id: <assigned>. See
-    "Coordinated nodes" above.
   - Honour the effective autonomy_level: <low|medium|high>.
   - Code lookup: <LSP is available — use it for find-references / definitions / call-hierarchy | LSP is unavailable — fall back to grep + Read>. See references/code-lookup.md.
 

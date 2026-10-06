@@ -27,26 +27,10 @@ Read it in full before step 1. This file is only the entry point.
 
 ## Workflow
 
-0. **Resolve.** Root and manifest (`${CLAUDE_PLUGIN_ROOT}/scripts/dae_resolve.py`).
-   If `<feature>` has no folder, run `/engineer.feature-init` first. If
-   `gate_profile.lane: express`, invoke `/engineer.express` and stop.
-   Enforce the branch (`dae_branch.py`). Find the resume point with
-   `dae_handoff.py <feature-dir>`.
-1. **Shape.** Build the graph (coordinator.md, *Shape-selection rubric*), write
-   `features/NNN-<slug>/run-graph.yml`, and validate it with
-   `${CLAUDE_PLUGIN_ROOT}/scripts/dae_graph.py`. Do not run a graph that fails
-   validation.
-2. **Propose**, as a choice point together with the front gate (coordinator.md,
-   step 1): the graph, each node's role, class and cap, and rough tokens and
-   wall-clock per segment.
-3. **Run** the segments with the dispatch loop (coordinator.md, step 2): brief
-   each node with `coordinated: true`, serve its yields, check the outside
-   evidence after each node, and record `actual:`. Re-shape on drift and report
-   it (ask only at `low`).
-4. **Gates.** Stop at the front gate and the back gate as `gate_profile` and
-   `autonomy_level` dictate. Everything else in the middle runs without asking.
-5. **Close.** Compare the actual run with the proposal, present the back gate,
-   then the merge under the external-write gate.
+Execute `coordinator.md` from "The run". In short: resolve the feature (XS goes
+to `/engineer.express`), propose a graph that `dae_graph.py` accepts, run its
+segments, stop only at the gates, and compare the actual run with the proposal
+at the close.
 
 ## Handoff
 
