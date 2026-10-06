@@ -33,7 +33,7 @@ create one TodoWrite todo per step. See
 `${CLAUDE_PLUGIN_ROOT}/references/progress-indicator.md`.
 
 **Verification independence:** CP8 runs on a non-implementer agent
-(`agent_id` ≠ CP5's; enforced by `dae_handoff.py gate()`).
+(`agent_id` ≠ CP5's and CP6's; enforced by `dae_handoff.py gate()`).
 
 1. **Resolve + scope.** Resolve the root and manifest via
    `${CLAUDE_PLUGIN_ROOT}/scripts/dae_resolve.py`. Scope = changed code. Load

@@ -115,26 +115,30 @@ def _all_records(feature_dir):
     return records
 
 
+# Principle 7: who must not verify whose work. CP5 implements, CP6 refines
+# (also authorship), CP7/CP8 verify. A checkpoint's handoff agent_id must
+# differ from every author checkpoint listed against it.
+_INDEPENDENT_OF = {6: (5,), 7: (5, 6), 8: (5, 6)}
+
+
 def independence_violations(feature_dir):
-    """Return [(verify_filename, implement_agent_id, violator_cp), ...] for every
-    case where a verification handoff (CP 6, 7, 8) shares agent_id with the same
-    feature's CP5 implement handoff. Principle 7: the verifier must not be the
-    implementer.
+    """Return [(handoff_filename, shared_agent_id, violator_cp, author_cp), ...]
+    for every handoff whose agent_id matches an author checkpoint it must be
+    independent of (_INDEPENDENT_OF): the refiner is not the implementer, the
+    verifier is neither the implementer nor the refiner.
 
     A missing agent_id on either side is ignored (no comparison possible).
     """
     records = _all_records(feature_dir)
-    implement_agent = None
+    authors = {}
     for _, rec in records:
-        if rec["checkpoint"] == 5 and rec["agent_id"]:
-            implement_agent = rec["agent_id"]
-            break
-    if not implement_agent:
-        return []
+        if rec["checkpoint"] in (5, 6) and rec["agent_id"]:
+            authors.setdefault(rec["checkpoint"], rec["agent_id"])
     violations = []
     for fname, rec in records:
-        if rec["checkpoint"] in (6, 7, 8) and rec["agent_id"] == implement_agent:
-            violations.append((fname, implement_agent, rec["checkpoint"]))
+        for author_cp in _INDEPENDENT_OF.get(rec["checkpoint"], ()):
+            if rec["agent_id"] and rec["agent_id"] == authors.get(author_cp):
+                violations.append((fname, rec["agent_id"], rec["checkpoint"], author_cp))
     return violations
 
 
@@ -163,7 +167,7 @@ def audit(feature_dir):
 def gate(feature_dir, through=None):
     """Return (ok, message). ok is False if a checkpoint <= `through` is not
     backed by a complete handoff, or any claimed-done checkpoint has no handoff,
-    or any verification handoff shares agent_id with the CP5 implement handoff.
+    or any verification handoff shares agent_id with an author (CP5/CP6) handoff.
     NON_SKILL_CHECKPOINTS never count as gaps — they carry no skill handoff.
     """
     a = audit(feature_dir)
@@ -173,8 +177,8 @@ def gate(feature_dir, through=None):
     if a["independence_violations"]:
         v = a["independence_violations"][0]
         return False, ("verifier-independence violated: CP%s handoff %s "
-                       "shares agent_id %s with the CP5 implement handoff "
-                       "(Principle 7)") % (v[2], v[0], v[1])
+                       "shares agent_id %s with the CP%s handoff "
+                       "(Principle 7)") % (v[2], v[0], v[1], v[3])
     if through is not None and through not in NON_SKILL_CHECKPOINTS \
             and through not in a["complete"]:
         return False, "checkpoint %s is not complete -- cannot advance past it" % through

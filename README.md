@@ -97,6 +97,20 @@ Eight checkpoints, each gated on the previous one's handoff:
 | **7** | Verify | `/engineer.arch-check` + `crap-analyzer` | Architecture fitness (layering, cycles, forbidden patterns, naming, size) + change-risk on the diff. **A different agent than the implementer.** |
 | **8** | Harden *(optional)* | `/atdd:atdd-mutate` | **Differential mutation testing** proves the unit tests actually catch bugs. |
 
+**Or run it coordinated.** `/engineer.run <feature>` drives CP2 → CP8 as an
+**agent orchestration graph**. A coordinator proposes the graph up front: the
+shape of each segment (Chain, Fan-out, Diamond, Star, Loop, Feedback), each
+node's model class and loop cap, and a rough token and wall-clock estimate. It
+then dispatches every checkpoint as a fresh agent and stops only at the **front
+gate** (ACs + spec + plan) and the **back gate** (did it work). It stays thin: it
+reads handoffs and script output, never source code. Every loop has a hard cap
+and a no-progress stop, and every fan-out is checked by evidence from outside it
+(a tool run or a human), so parallel agents cannot just agree with each other.
+An XS feature skips all of this and goes straight to `/engineer.express`. The
+skills above still work standalone, unchanged. See
+[`coordinator.md`](engineer/references/coordinator.md) and
+[`graph-shapes.md`](engineer/references/graph-shapes.md).
+
 Cross-cutting, any time: `clarify` · `consistency-check` · `feature-edit` ·
 `progress-log` · `reorient` · `session-summary` · `next`.
 
@@ -110,15 +124,15 @@ At each checkpoint's Step 0:
 |---|---|---|
 | **Entry** | `dae_handoff.py` | The prior checkpoint's handoff exists, `status: complete`, every exit criterion met |
 | **Branch** | `dae_branch.py` | You're on the feature's branch (`git.manual: true` opts out) |
-| **Ontology** | `dae_ontology.py` | Artifact-graph constraints — enumerations, AC↔scenario coverage, verifier ≠ implementer |
+| **Ontology** | `dae_ontology.py` | Artifact-graph constraints — enumerations, AC↔scenario coverage, verifier ≠ implementer or refiner |
 | **Breadcrumb** | `dae_progress.py` | Passive "you are here" across the pipeline + roadmap |
 
-All 21 scripts are **stdlib-only Python 3**, each with a `test_*.py` sibling —
-483 tests. No dependencies is a deliberate portability constraint, not an
+All 26 scripts are **stdlib-only Python 3**, each with a `test_*.py` sibling —
+531 tests. No dependencies is a deliberate portability constraint, not an
 aesthetic one.
 
 <details>
-<summary><b>The full guardrail set</b> (21 scripts)</summary>
+<summary><b>The full guardrail set</b></summary>
 
 | Script | Purpose |
 |---|---|
@@ -140,6 +154,7 @@ aesthetic one.
 | `dae_infra.py` | Declared infrastructure probe / start / teardown |
 | `dae_introvert.py` | Flags tests that pass without asserting on output |
 | `dae_fix.py` | Bug-fix lifecycle + gap analysis |
+| `dae_graph.py` | Validates `/engineer.run`'s graph: loop caps, outside evidence for fan-outs, no segment spanning a human gate |
 
 </details>
 
@@ -215,14 +230,14 @@ pipeline and on the roadmap.
 
 | Plugin | Purpose | Version |
 |---|---|---|
-| **[`engineer`](engineer/)** | The DAE methodology kit — 24 skills, 6 role agents, 25 guardrail scripts, the checkpoint pipeline | 0.33.0 |
-| **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.4 |
+| **[`engineer`](engineer/)** | The DAE methodology kit — 25 skills, 6 role agents, 26 guardrail scripts, the checkpoint pipeline | 0.34.0 |
+| **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.5 |
 | **[`crap-analyzer`](crap-analyzer/)** | Change Risk Anti-Pattern analysis on changed code | 0.1.1 |
 
 ### `engineer` — the methodology kit
 
 <details>
-<summary><b>All 24 skills</b></summary>
+<summary><b>All 25 skills</b></summary>
 
 | Skill | Role |
 |---|---|
@@ -239,6 +254,7 @@ pipeline and on the roadmap.
 | `refinement-advisor` | Recommends which refine/verify/harden checks fit a diff; decides alone at high autonomy |
 | `tlaplus` | Model-check real code or a design with TLA+/TLC; counterexample → failing test |
 | `lean` | Prove an all-inputs invariant of real code in Lean 4; counterexample → failing test |
+| `run` | Coordinator: proposes the feature's agent graph, then drives CP2 → CP8 with only the front and back gates as human stops |
 | `fix` | Bug lifecycle, with a "why didn't we catch it?" gap analysis |
 | `reorient` | Mid-task re-anchoring after compaction or a long run |
 | `clarify` | Single-artifact ambiguity resolution |
@@ -274,7 +290,7 @@ role by copying the file into its own `.claude/agents/`.
 Deeper detail lives in the repo, not here: `engineer/skills/*/SKILL.md` for each
 skill's workflow and exit contract, and `engineer/references/` for the shared
 contracts — handoff schema, progress indicators, review panel, model classes,
-host capabilities, ontology, parallelism, and more.
+host capabilities, ontology, parallelism, graph shapes, the coordinator, and more.
 
 ### `atdd` — Acceptance Test Driven Development
 
@@ -500,9 +516,10 @@ it adapts the methodology.
 │   ├── agents/              # 6 role agents (reviewer, panel-adviser/advocate,
 │   │                        #   gauntlet-critic, formal-verifier, verifier)
 │   ├── references/          # shared contracts — handoff, ontology, panel,
-│   │                        #   model classes, host capabilities, parallelism
+│   │                        #   model classes, host capabilities, parallelism,
+│   │                        #   graph shapes, coordinator
 │   ├── scripts/             # dae_*.py guardrails + their unit tests
-│   ├── skills/              # the 24 engineer skills
+│   ├── skills/              # the 25 engineer skills
 │   └── examples/            # optional host hook configs
 │
 └── crap-analyzer/           # change-risk analysis plugin

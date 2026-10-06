@@ -224,13 +224,13 @@ def check_feature(feature_dir):
                 "error", "enumeration", name,
                 "%s: checkpoint %r is not a pipeline stop" % (fname, cp)))
 
-    # disjoint — verifier must not be the implementer (Principle 7).
+    # disjoint — verifier must not be the implementer or refiner (Principle 7).
     # dae_handoff owns this rule; reuse it rather than restating it.
-    for fname, agent, cp in dae_handoff.independence_violations(feature_dir):
+    for fname, agent, cp, author_cp in dae_handoff.independence_violations(feature_dir):
         out.append(finding(
             "error", "disjoint", name,
-            "%s: CP%s verified by %r, the same agent that implemented CP5"
-            % (fname, cp, agent)))
+            "%s: CP%s run by %r, the same agent that authored CP%s"
+            % (fname, cp, agent, author_cp)))
 
     return out
 

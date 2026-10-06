@@ -14,6 +14,44 @@ After a skill writes its handoff, the next checkpoint often needs a **fresh agen
 
 **Otherwise: DISPATCH** the next agent automatically via the Agent tool. Brief it with the feature slug, the relevant handoff, and the next-checkpoint instructions.
 
+## Coordinated nodes — `coordinated: true` in the brief
+
+Under `/engineer.run` a coordinator owns the graph (`coordinator.md`). Any skill
+whose brief says `coordinated: true` changes exactly three things, and nothing
+else about its workflow:
+
+1. **No auto-dispatch.** Write the handoff, then return its path. Skip this
+   file's dispatch rule entirely: the coordinator dispatches the next node.
+2. **No human stops.** Do not present a gate or ask the human anything. Where
+   the skill would ask, take the coordinated default from the table below, or
+   return `DECISION` followed by the question and wait. The coordinator either
+   holds the question for the next gate or, when per-checkpoint gates apply
+   (`autonomy_level: low` or no `gate_profile`), asks right away and continues
+   you with the answer.
+3. **Yield instead of spawning.** A subagent cannot spawn its own subagents. At a
+   step that dispatches (a review panel, refine lenses, a gauntlet critic,
+   formal checks), stop and return `YIELD` followed by the briefs you would have
+   sent, built from the template below. Then wait. The coordinator runs them and
+   continues you with their replies. Count yielded loop rounds against the cap in
+   your brief.
+
+Also write the `agent_id` the brief assigns into your handoff, exactly as given.
+The infra-ensure rule below still applies to you: it is part of running your
+work, not of dispatching.
+
+Coordinated defaults where a skill would normally ask:
+
+| Skill | Standalone, it asks… | Coordinated, instead… |
+|---|---|---|
+| `discover-acs` | the four-pass interview; confirm each step-3b checklist item | drafts from feature.md, the code and the checklist; each unconfirmed item becomes an **open question** in the handoff, answered at the front gate |
+| `plan` | confirm the architecture before drafting the rest | drafts the full plan; the architecture goes to the front gate with the bundle. At per-checkpoint gates it returns `DECISION` with the architecture |
+| `atdd:atdd-team` | runs Phases 1–6 and asks about the next feature | runs **Phase 4 only** (implement + gauntlet), because CP3 and CP6–8 are separate nodes. No "next feature" question |
+| `refine` | the human picks which proposals to apply | applies charter-compliant **internal-only** proposals. Consumer-facing breaking changes go into the handoff as open decisions for the back gate |
+| `harden` | below `high`, the refinement-advisor's pick is offered | uses the advisor's pick and records it; the back gate shows it |
+
+Without `coordinated: true` (the skill invoked directly), nothing here applies
+and the skill behaves as it always has.
+
 ## Autonomy decision table
 
 | Effective `autonomy_level` | Default dispatch behavior |
@@ -112,6 +150,8 @@ prompt:
 
   Constraints:
   - You are the fresh agent the charter §6 calls for; do NOT relax independence.
+  - (Under /engineer.run only) coordinated: true; agent_id: <assigned>. See
+    "Coordinated nodes" above.
   - Honour the effective autonomy_level: <low|medium|high>.
   - Code lookup: <LSP is available — use it for find-references / definitions / call-hierarchy | LSP is unavailable — fall back to grep + Read>. See references/code-lookup.md.
 

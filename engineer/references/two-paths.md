@@ -58,6 +58,18 @@ disposition (row above) is exactly the weight decision, with XS as the small
 notch. See `references/choice-points.md` for the two funnel decisions and the
 size projection that recommends one.
 
+## Standalone or coordinated
+
+Either path's numbered checkpoints can be run in two ways:
+
+- **Standalone.** Each skill runs on its own and dispatches the next one per
+  `handoff-dispatch.md`. This is the default, and nothing about it changes.
+- **Coordinated.** `/engineer.run <feature>` proposes the feature's agent graph
+  (shapes, model classes, loop caps, cost estimate) and drives CP2 → CP8,
+  stopping only at the front and back gates (`references/coordinator.md`). A
+  converged prototype enters it after the convert pivot like any other Ready
+  feature. An `in-place` XS prototype branches to `/engineer.express` instead.
+
 ## Deliberately not built — micro-prototyping within a feature
 
 `prototype` is a **feature-level entry path only.** Prototyping individual pieces
@@ -77,6 +89,7 @@ made (after the artifact exists) without removing it.
 ## References
 
 - `${CLAUDE_PLUGIN_ROOT}/skills/prototype/SKILL.md` — the prototype-first entry + convert pivot
+- `${CLAUDE_PLUGIN_ROOT}/references/coordinator.md` — the coordinated path (`/engineer.run`)
 - `${CLAUDE_PLUGIN_ROOT}/references/gauntlet.md` — the prototype as reference bar
 - `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md` — the `size` dial the disposition reuses
 - `${CLAUDE_PLUGIN_ROOT}/skills/discover-acs/SKILL.md` — reverse-engineer mode = convert-to-ACs

@@ -287,6 +287,15 @@ class IndependenceViolationTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("Principle 7", msg)
 
+    def test_violation_when_verifier_is_refiner(self):
+        d = _make_feature([
+            _handoff("atdd", "subagent-A", 5),
+            _handoff("refine", "subagent-B", 6),
+            _handoff("verify", "subagent-B", 7),
+        ], PROGRESS)
+        self.addCleanup(shutil.rmtree, d)
+        self.assertEqual([v[2:] for v in dh.independence_violations(d)], [(7, 6)])
+
     def test_no_cp5_no_violation(self):
         # If there's no implement handoff at CP5, independence is vacuous.
         d = _make_feature([
