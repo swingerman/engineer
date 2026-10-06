@@ -14,6 +14,8 @@ After a skill writes its handoff, the next checkpoint often needs a **fresh agen
 
 **Otherwise: DISPATCH** the next agent automatically via the Agent tool. Brief it with the feature slug, the relevant handoff, and the next-checkpoint instructions.
 
+**Offer the coordinated path at every checkpoint.** A standalone skill finishing CP1.5–CP7 on a non-express feature always names `/engineer.run <slug>` as the alternative way to continue. It resumes from this checkpoint and drives the rest with only the front and back gates as stops (`coordinator.md`). Put the offer where the skill already talks to the human. At a stop or a `low` confirm, it is the second option of the choice point. At `medium`, it goes in the one-line dispatch announcement ("dispatching CP4 plan, or `/engineer.run <slug>` to coordinate the rest"). At `high`, it goes in the reported outcome. In the handoff, `recommended_next` names the next skill and adds "or /engineer.run <slug>". The offer never adds a stop of its own. A `coordinated: true` node skips it, since it is already coordinated.
+
 ## Coordinated nodes — `coordinated: true` in the brief
 
 Under `/engineer.run` a coordinator owns the graph (`coordinator.md`). Any skill
