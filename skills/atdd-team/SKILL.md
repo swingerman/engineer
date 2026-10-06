@@ -148,7 +148,12 @@ Instruct it to:
   to report progress or ask whether to continue — that pause is the babysitting
   the checkpoint exists to avoid. Escalate to the team lead only on: a spec that
   looks wrong, a green test turning red, or `manifest.autonomy.stuck_loop_threshold`
-  consecutive rounds with no test moving to green.
+  consecutive rounds with no test moving to green (the no-progress stop).
+- **The loop is capped.** `max_rounds` = 2 × the acceptance tests failing at
+  the start. Each round should close one, so hitting the cap means something is
+  wrong: stop, record the still-red tests, set `human_action_needed: yes`.
+  Every agent loop declares a cap and a no-progress stop; see the engineer
+  plugin's `references/graph-shapes.md` (the loop rule).
 
 **Then — the gauntlet, if the feature declared a bar.** Once both streams are
 green, read `plan.md`'s Test strategy for a `gauntlet:` block. If there is one,

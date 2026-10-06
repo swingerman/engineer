@@ -73,7 +73,7 @@ Record `investigation.candidates_considered`. Set `status: pinned-pending`.
 
 Write one regression Given/When/Then spec **per `feature_refs` entry** (not a shared spec). Use `references/regression-spec-template.md`.
 
-Run the spec on current code. It **MUST be RED**. If it passes (GREEN) the spec does not pin the bug — redraft until RED. Record `red_run.result: red` + command + output in `pin_confirmation.feature_refs[*]`.
+Run the spec on current code. It **MUST be RED**. If it passes (GREEN) the spec does not pin the bug — redraft until RED, at most 3 drafts (stop early if two drafts in a row go GREEN for the same reason). Hitting the cap means the bug is not understood yet: return to Step 2, do not ship a spec that can't go RED. Record `red_run.result: red` + command + output in `pin_confirmation.feature_refs[*]`.
 
 Present the spec(s) and red-run evidence to the user for confirmation before proceeding. Set `status: pinned`.
 

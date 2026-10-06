@@ -14,8 +14,9 @@ babysat even when the specs and designs were ready before a line was written.
 The gauntlet substitutes a critic agent with a reference for the human with an
 opinion.
 
-Adapted from the Gauntlet Loop (somethingbig.ai). It is the loop-until quality
-pattern of `${CLAUDE_PLUGIN_ROOT}/references/parallelism.md`, with a bar.
+Adapted from the Gauntlet Loop (somethingbig.ai). It is the **Feedback** shape
+(`${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md`) with a bar, and the worked
+instance of the loop rule: every loop declares a cap and a no-progress stop.
 
 ## The bar — no bar, no gauntlet
 

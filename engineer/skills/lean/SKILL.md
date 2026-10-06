@@ -48,7 +48,10 @@ If the project has a `lakefile.lean`/`lakefile.toml` + `lean-toolchain`, just
    `sorry`.
 6. **Iterate**: fix → rebuild → read next error. Don't try to fix every error
    in one shot on a long proof; Lean errors often cascade from one root
-   cause.
+   cause. The loop is capped: at most 10 rebuilds per goal, and stop early if
+   two consecutive rebuilds show the same error on the same goal. On either
+   stop, report the remaining goal state; that is a result, not a failure to
+   hide.
 
 ## Verifying real code ("use lean to verify X")
 
