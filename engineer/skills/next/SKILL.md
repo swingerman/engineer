@@ -88,7 +88,7 @@ Present the eight buckets, then a **two-altitude answer** — because "what's ne
 - **Next to ADVANCE/finish** — the single best *actionable* next step across in-flight work, fixes, and dispatch (the existing top pick). Unblocking and user-blocking defects win here.
 - **Next to START** — the top `ON THE ROADMAP` item: the next strategic feature to begin once there's capacity. Always shown so "what's next *in the roadmap*" is answered directly, even when the top actionable pick is finishing something else.
 
-Give one top recommendation with a one-line rationale and a suggested execution mode (you, local subagent, agent team, or cloud agent — for the last, the dispatch router gates via `dae_delegable.py`); name the roadmap's next-to-start alongside it. If in-flight work is clear (nothing to advance, no open fixes), the roadmap's next-to-start *becomes* the top pick.
+Give one top recommendation with a one-line rationale and a suggested execution mode (you, local subagent, agent team, **coordinated**, or cloud agent — for the last, the dispatch router gates via `dae_delegable.py`). Suggest **coordinated** (`/engineer.run <slug>`, see `${CLAUDE_PLUGIN_ROOT}/references/coordinator.md`) for a non-express feature at autonomy `medium`/`high` that has two or more checkpoints left before CP8. It resumes from the latest complete checkpoint, so a half-done feature qualifies. name the roadmap's next-to-start alongside it. If in-flight work is clear (nothing to advance, no open fixes), the roadmap's next-to-start *becomes* the top pick.
 
 **Promoting a TRIAGE item** is the human's call — `next` only recommends. *Work it now* → promote to the right unit and start: bug→`/fix`, idea→`/discuss`, task→`/feature-init` (each reads the tracker row as intake, reuses its `tracker_ref`, and writes the assigned `Slug` back — no duplicate row). *Later* → leave it, optionally raise a `priority`/`Status`. *Drop* → set `Status: wontfix`.
 
@@ -107,7 +107,7 @@ OPEN FIXES (2)
   • 2026-05-18-export-timeout [high] blocks_user=true workaround="retry after 30 s"
 
 READY TO ADVANCE (1)
-  • 015-image-formats — at Checkpoint 2; ACs done, ready for /atdd:atdd
+  • 015-image-formats — at Checkpoint 2; ACs done, ready for /atdd:atdd (or /engineer.run 015-image-formats to drive CP3→CP8)
 
 READY TO DISPATCH (2)
   • consolidation #1 core-image-generation — full ATDD coverage; remote one-shot
