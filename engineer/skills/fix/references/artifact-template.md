@@ -43,6 +43,15 @@ pin_confirmation:
 fix_commits:
   - "a1b2c3d fix: guard expired-token redirect in SessionMiddleware"
 
+regression_evidence:                         # REQUIRED from status: fixed on
+  repro_commit: "9f8e7d6"                    # Step 3 — commit adding the RED spec; must be an ancestor of fix_commits[0]
+  command: "pytest tests/auth/test_redirect.py::test_expired_token_redirect"
+  fail_output: |                             # run at repro_commit
+    FAILED — AssertionError: expected redirect once, got loop
+  pass_output: |                             # Step 4 — same command after the last fix commit
+    1 passed
+  order_verified: "a1b2c3d4e5f6…"             # Step 4 — full sha of fix_commits[0], recorded once --validate passes the order check on the branch; required from refined on
+
 attempts:                                    # Step 4 — one entry per attempt, appended BEFORE the attempt
   - gate: regression-spec
     result: fail                              # pending | pass | fail
@@ -89,5 +98,5 @@ investigating → pinned-pending → pinned → fixed → refined → verified �
 ```
 
 Each status is written by the skill step that completes it (Steps 1–9).
-`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, gap_analysis category membership, and that any attempt after two failures on the same gate carries a complete, unfalsified `premise:`.
+`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, gap_analysis category membership, that any attempt after two failures on the same gate carries a complete, unfalsified `premise:`, and — from `status: fixed` on — complete `regression_evidence` whose `repro_commit` is a strict git ancestor of `fix_commits[0]` (or, once the commits are gone after a squash merge, a recorded `order_verified`). Fixes dated before `dae_handoff.REAL_RUN_CUTOFF` get warnings instead of errors for these checks.
 `dae_fix.py close_ready(rec)` enforces the close gate: pin confirmed + hardened (including bug-line gate) + gap_analysis non-empty + no unresolved blockers.

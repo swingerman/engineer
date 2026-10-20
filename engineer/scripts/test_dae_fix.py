@@ -944,5 +944,54 @@ class TestAttemptPremiseGate(unittest.TestCase):
         self.assertTrue(any("premise" in e for e in dae_fix.validate_fix(rec)))
 
 
+class TestReproBeforeFix(unittest.TestCase):
+    """From status: fixed, fail-then-pass evidence is required and the repro commit
+    must be an ancestor of the first fix commit."""
+
+    def test_gate(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as repo:
+            def commit(msg):
+                subprocess.run(["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t",
+                                "commit", "-q", "--allow-empty", "-m", msg], check=True)
+                return subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                                      capture_output=True, text=True).stdout.strip()
+            subprocess.run(["git", "init", "-q", repo], check=True)
+            repro, fix = commit("repro"), commit("fix")
+            ev = {"repro_commit": repro, "command": "t", "fail_output": "1 failed",
+                  "pass_output": "1 passed"}
+            rec = {"slug": "2026-10-20-x", "title": "X", "status": "fixed",
+                   "fix_commits": [fix + " fix: x"], "regression_evidence": ev}
+            order = lambda **kw: dae_fix.repro_order_errors(dict(rec, **kw), repo)  # noqa: E731
+            self.assertEqual(dae_fix.validate(rec, repo), ([], []))
+            # fix landed first / repro squashed into the fix
+            self.assertIn("ancestor", order(fix_commits=[repro],
+                                            regression_evidence=dict(ev, repro_commit=fix))[0])
+            self.assertIn("ancestor", order(regression_evidence=dict(ev, repro_commit=fix))[0])
+            # past fixed: order_verified must be recorded and match fix_commits[0]
+            self.assertIn(fix, order(status="refined")[0])
+            self.assertTrue(order(status="refined",
+                                  regression_evidence=dict(ev, order_verified=repro)))
+            verified = dict(ev, order_verified=fix)
+            self.assertEqual(order(status="refined", regression_evidence=verified), [])
+            # squash-merged: commits gone, recorded order_verified stands in
+            gone = ["0" * 40 + " fix: x"]
+            self.assertEqual(order(status="closed", fix_commits=gone,
+                                   regression_evidence=dict(verified, repro_commit="1" * 40)), [])
+            self.assertIn("not found", order(status="closed", fix_commits=gone)[0])
+            # evidence missing / incomplete
+            self.assertTrue(dae_fix.evidence_errors(dict(rec, regression_evidence=None)))
+            self.assertIn("pass_output", dae_fix.evidence_errors(
+                dict(rec, regression_evidence=dict(ev, pass_output="")))[0])
+            self.assertTrue(dae_fix.evidence_errors(dict(rec, fix_commits=[])))
+            self.assertEqual(dae_fix.evidence_errors({"status": "pinned"}), [])
+            # cutoff: new fixes error, older in-flight fixes only warn
+            bare = dict(rec, regression_evidence=None)
+            errors, warnings = dae_fix.validate(bare, repo)
+            self.assertTrue(errors and not warnings)
+            errors, warnings = dae_fix.validate(dict(bare, slug="2026-10-19-x"), repo)
+            self.assertTrue(warnings and not errors)
+
+
 if __name__ == "__main__":
     unittest.main()

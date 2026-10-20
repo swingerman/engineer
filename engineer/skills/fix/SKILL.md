@@ -17,7 +17,7 @@ Unlike ad-hoc fixes, the `fix` workflow enforces a regression spec that must be 
 
 **Not for:** building a new capability (`/engineer.discuss` or `/engineer.feature-init`); adjusting an in-flight feature's scope (`/engineer.feature-edit`); reviewing recent changes without a defect (`/engineer.arch-check` or `/crap-analyzer`).
 
-**Maintenance auto-invocation.** `fix` is the landing point of the SDLC's maintenance loop (`${CLAUDE_PLUGIN_ROOT}/references/intent.md`): a trigger — a Sentry/CI alert, a Slack message, or a schedule — can invoke it with no human at the start. Wire the trigger via the `schedule` skill (cron routines) or an external alert calling `claude -p "/engineer.fix <signal>"`; Step 1 synthesizes the bug intent from the signal/logs and the pipeline runs, surfacing to a human only at the review gates its `severity` + effective autonomy demand (a `critical` or user-blocking defect always confirms; low-severity internal ones can run further unattended). The external-write gate (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`) still applies — a maintenance run never merges/deploys on its own unless `verify: auto` + `dae_mergeready` clear it.
+**Maintenance auto-invocation.** `fix` is the landing point of the SDLC's maintenance loop (`${CLAUDE_PLUGIN_ROOT}/references/intent.md`): a trigger (a Sentry/CI alert, a Slack message, or a schedule) can invoke it with no human at the start. Wire the trigger via the `schedule` skill (cron routines) or an external alert calling `claude -p "/engineer.fix <signal>"`; Step 1 synthesizes the bug intent from the signal/logs and the pipeline runs, surfacing to a human only at the review gates its `severity` + effective autonomy demand (a `critical` or user-blocking defect always confirms; low-severity internal ones can run further unattended). The external-write gate (`${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`) still applies: a maintenance run never merges/deploys on its own unless `verify: auto` + `dae_mergeready` clear it.
 
 ## Workflow
 
@@ -75,11 +75,13 @@ Write one regression Given/When/Then spec **per `feature_refs` entry** (not a sh
 
 Run the spec on current code. It **MUST be RED**. If it passes (GREEN) the spec does not pin the bug — redraft until RED, at most 3 drafts (stop early if two drafts in a row go GREEN for the same reason). Hitting the cap means the bug is not understood yet: return to Step 2, do not ship a spec that can't go RED. Record `red_run.result: red` + command + output in `pin_confirmation.feature_refs[*]`.
 
+**Commit the repro first.** Commit the RED regression spec on its own, before any fix code. Record that sha, the spec's run command, and its failing output as `regression_evidence.{repro_commit, command, fail_output}`.
+
 Present the spec(s) and red-run evidence to the user for confirmation before proceeding. Set `status: pinned`.
 
 ### Step 4 — Fix (CP5-style)
 
-Implement the fix using the same discipline as Checkpoint 5. The regression spec must turn GREEN. Update `fix_commits`. Set `status: fixed`.
+Implement the fix using the same discipline as Checkpoint 5. The regression spec must turn GREEN. Update `fix_commits` and record the same command's passing output as `regression_evidence.pass_output`. Set `status: fixed`. From `fixed` on, `dae_fix.py --validate` rejects the artifact unless `regression_evidence` is complete and `repro_commit` is a strict git ancestor of `fix_commits[0]`. A fix committed before its repro (or squashed together with it) cannot pass. Once the order check passes on the branch, record `regression_evidence.order_verified: <full sha of fix_commits[0]>` (the error message prints it). It is required from `refined` on, and it stands in for the git check after a squash merge removes the branch commits. Fixes dated before the cutoff in `dae_handoff.REAL_RUN_CUTOFF` only get a warning.
 
 **Attempt log.** Before each attempt at a gate (the regression spec, the bug-line gate, any check that must pass), append `{gate, result: pending}` to `attempts:` and run `dae_fix.py --validate`; set `result: pass|fail` once the gate runs. After two `fail`s on the same gate, `--validate` refuses the next attempt on that gate unless the entry has a `premise:` block: the root-cause `belief` being acted on, an `observation` that would come out differently if the belief were false, the `command` run to check it, its `output`, and `falsified: true|false`. Two failed fixes usually mean the belief is wrong, not the patch. If the observation falsifies the belief (`falsified: true`), validation still fails: go back to Step 2, re-diagnose, and record a new premise before writing any code.
 
@@ -111,7 +113,7 @@ Write approved findings to `gap_analysis[*]`. Determine blockers via `blocker_ca
 
 ### Step 9 — Close
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_fix.py` `close_ready(rec)`. Hard preconditions: pin confirmed, hardened (including bug-line gate), `gap_analysis` non-empty, no unresolved blockers.
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_fix.py --validate <fix-file>` (with `status: closed`) and `close_ready(rec)`. Hard preconditions: pin confirmed, hardened (including bug-line gate), `gap_analysis` non-empty, no unresolved blockers.
 
 Emit a handoff that reference-links each `feature_refs[*]/progress.md`. Set `status: closed`.
 
