@@ -24,6 +24,11 @@ import dae_resolve
 # carry no skill handoff, so they never count as a gate failure.
 NON_SKILL_CHECKPOINTS = (0, 1.5)
 
+# Features whose feature.md `created:` date is on or after this need real-app
+# evidence at CP7. Older features (or ones with no `created:`) were already in
+# flight when the gate shipped: they get a warning instead of a block.
+REAL_RUN_CUTOFF = "2026-10-20"
+
 
 def _num(val):
     """Parse a checkpoint number ('2' -> 2, '1.5' -> 1.5); None if not numeric."""
@@ -43,7 +48,7 @@ def parse_handoff(text):
     value lets callers report it explicitly instead of confusing it with absent.
     """
     rec = {"checkpoint": None, "status": None, "exit_criteria": [],
-           "skill": None, "agent_id": None}
+           "skill": None, "agent_id": None, "real_run": None}
     fm = dae_resolve.extract_frontmatter(text)
     if not fm:
         return rec
@@ -62,6 +67,8 @@ def parse_handoff(text):
     rec["skill"] = skill if isinstance(skill, str) else None
     agent_id = data.get("agent_id")
     rec["agent_id"] = agent_id if isinstance(agent_id, str) else None
+    real_run = data.get("real_run")
+    rec["real_run"] = real_run if isinstance(real_run, dict) else None
     raw_criteria = data.get("exit_criteria")
     if isinstance(raw_criteria, list):
         for entry in raw_criteria:
@@ -100,6 +107,47 @@ def _rec_complete(rec):
     if rec["status"] != "complete":
         return False
     return all(c["met"] is True for c in rec["exit_criteria"])
+
+
+def real_run_gap(feature_dir, rec):
+    """None if this CP7 handoff cites real-app evidence, else the reason it doesn't.
+
+    On an onboarded project CP7 must show the real app running: the handoff's
+    `real_run: {skill, evidence: [paths]}` names the manifest's `verify_app`
+    skill, and every evidence path (relative to the methodology root) exists
+    and is non-empty. `verify_app: none` is the explicit, reviewable opt-out.
+    No manifest -> not onboarded -> no requirement.
+    """
+    root, manifest_path = dae_resolve.find_methodology_root(feature_dir)
+    if not root:
+        return None
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest = dae_resolve.read_manifest(f.read())
+    except (OSError, dae_resolve.ManifestError):
+        manifest = {}
+    app = manifest.get("verify_app") if isinstance(manifest, dict) else None
+    if app == "none":
+        return None
+    if not app:
+        return "manifest has no verify_app -- run /engineer.onboard to generate the verify skill"
+    if not os.path.isfile(os.path.join(root, ".claude", "skills", app, "SKILL.md")):
+        return ".claude/skills/%s/SKILL.md is missing -- run /engineer.onboard" % app
+    rr = rec["real_run"] or {}
+    if rr.get("skill") != app:
+        return "CP7 handoff has no real_run block citing skill %s" % app
+    evidence = rr.get("evidence")
+    if isinstance(evidence, str):
+        evidence = [evidence]
+    if not evidence:
+        return "real_run.evidence is empty -- capture evidence by running the real app"
+    for path in evidence:
+        full = os.path.join(root, str(path))
+        # ponytail: existence + non-empty only; a captured-after-CP5 timestamp
+        # check would need git history, since checkout resets mtimes.
+        if not os.path.isfile(full) or os.path.getsize(full) == 0:
+            return "real_run evidence %s is missing or empty" % path
+    return None
 
 
 def _all_records(feature_dir):
@@ -146,9 +194,21 @@ def independence_violations(feature_dir):
 def audit(feature_dir):
     """Audit one feature folder. Returns a dict with complete/claimed/gaps."""
     complete = set()
-    for _, rec in _all_records(feature_dir):
-        if rec["checkpoint"] is not None and _rec_complete(rec):
-            complete.add(rec["checkpoint"])
+    real_run_gaps, real_run_warnings = [], []
+    created = _feature_field(feature_dir, "created") or ""
+    legacy = not re.match(r"\d{4}-\d{2}-\d{2}", created) \
+        or created[:10] < REAL_RUN_CUTOFF
+    for fname, rec in _all_records(feature_dir):
+        if rec["checkpoint"] is None or not _rec_complete(rec):
+            continue
+        if rec["checkpoint"] == 7:
+            why = real_run_gap(feature_dir, rec)
+            if why and legacy:
+                real_run_warnings.append("%s: %s" % (fname, why))
+            elif why:
+                real_run_gaps.append("%s: %s" % (fname, why))
+                continue
+        complete.add(rec["checkpoint"])
     claimed_done = set()
     progress_path = os.path.join(feature_dir, "progress.md")
     if os.path.isfile(progress_path):
@@ -162,6 +222,8 @@ def audit(feature_dir):
         "gaps": sorted(claimed_done - complete),
         "latest_complete": max(complete) if complete else None,
         "independence_violations": independence_violations(feature_dir),
+        "real_run_gaps": real_run_gaps,
+        "real_run_warnings": real_run_warnings,
     }
 
 
@@ -182,15 +244,19 @@ def gate(feature_dir, through=None):
                        "(Principle 7)") % (v[2], v[0], v[1], v[3])
     if through is not None and through not in NON_SKILL_CHECKPOINTS \
             and through not in a["complete"]:
-        return False, "checkpoint %s is not complete -- cannot advance past it" % through
-    return True, "ok -- latest complete checkpoint: %s" % a["latest_complete"]
+        msg = "checkpoint %s is not complete -- cannot advance past it" % through
+        if through == 7 and a["real_run_gaps"]:
+            msg += "; no real-app evidence: " + "; ".join(a["real_run_gaps"])
+        return False, msg
+    msg = "ok -- latest complete checkpoint: %s" % a["latest_complete"]
+    if a["real_run_warnings"]:
+        msg += ("\nWARNING: CP7 passed without real-app evidence (feature created "
+                "before %s): %s" % (REAL_RUN_CUTOFF, "; ".join(a["real_run_warnings"])))
+    return True, msg
 
 
-_STATUS_RE = re.compile(r"^status:[ \t]*(\S+)", re.MULTILINE)
-
-
-def _feature_status_field(feature_dir):
-    """feature.md frontmatter `status:`, or None."""
+def _feature_field(feature_dir, key):
+    """feature.md frontmatter `<key>:` (first token, quotes stripped), or None."""
     fm_path = os.path.join(feature_dir, "feature.md")
     if not os.path.isfile(fm_path):
         return None
@@ -198,8 +264,8 @@ def _feature_status_field(feature_dir):
         fm = dae_resolve.extract_frontmatter(f.read())
     if not fm:
         return None
-    m = _STATUS_RE.search(fm)
-    return m.group(1) if m else None
+    m = re.search(r"^%s:[ \t]*(\S+)" % re.escape(key), fm, re.MULTILINE)
+    return m.group(1).strip("'\"") if m else None
 
 
 def _last_handoff(feature_dir):
@@ -241,7 +307,7 @@ def project_status(start_dir="."):
         a = audit(fdir)
         out.append({
             "feature": name,
-            "status": _feature_status_field(fdir),
+            "status": _feature_field(fdir, "status"),
             "latest_complete_cp": a["latest_complete"],
             "gaps": a["gaps"],
             "independence_violations": len(a["independence_violations"]),

@@ -351,6 +351,15 @@ def validate_manifest(manifest):
         if not isinstance(block, dict) or not block.get("type"):
             errors.append("missing required field: %s.type" % section)
 
+    # verify_app: the project-local skill that drives the real app (CP7 evidence)
+    verify_app = manifest.get("verify_app")
+    if verify_app is None:
+        warnings.append("verify_app not set -- CP7 is blocked for new features "
+                        "until /engineer.onboard generates the verify skill")
+    elif verify_app != "none" and not str(verify_app).startswith("verify-"):
+        errors.append("verify_app = %r -- must be 'verify-<app>' or 'none'"
+                      % (verify_app,))
+
     # Enums
     _check_enum(errors, manifest, "roadmap", "type", ROADMAP_TYPES)
     _check_enum(errors, manifest, "tracker", "type", TRACKER_TYPES)

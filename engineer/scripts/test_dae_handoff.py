@@ -363,3 +363,64 @@ class TestProjectStatus(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class RealRunGateTests(unittest.TestCase):
+    """CP7 on an onboarded project needs evidence from the real app."""
+
+    def _project(self, verify_app="verify-web", evidence=b"HTTP 200",
+                 created=dh.REAL_RUN_CUTOFF):
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root)
+        os.makedirs(os.path.join(root, ".engineer"))
+        with open(os.path.join(root, ".engineer", "manifest.yml"), "w") as f:
+            f.write("verify_app: %s\n" % verify_app)
+        os.makedirs(os.path.join(root, ".claude", "skills", "verify-web"))
+        open(os.path.join(root, ".claude", "skills", "verify-web", "SKILL.md"), "w").close()
+        fdir = os.path.join(root, "features", "001-a")
+        os.makedirs(os.path.join(fdir, "handoffs"))
+        with open(os.path.join(fdir, "feature.md"), "w") as f:
+            f.write("---\nslug: 001-a\ncreated: %s\n---\n" % created)
+        if evidence is not None:
+            os.makedirs(os.path.join(fdir, "evidence"))
+            with open(os.path.join(fdir, "evidence", "run.txt"), "wb") as f:
+                f.write(evidence)
+        return fdir
+
+    def _write(self, fdir, real_run):
+        with open(os.path.join(fdir, "handoffs", "h7.md"), "w") as f:
+            f.write(_handoff("arch-check", "v", 7).replace(
+                "status: complete\n", real_run + "status: complete\n"))
+
+    RR = ("real_run:\n  skill: verify-web\n  evidence:\n"
+          "    - features/001-a/evidence/run.txt\n")
+
+    def test_passes_with_evidence(self):
+        fdir = self._project()
+        self._write(fdir, self.RR)
+        self.assertTrue(dh.gate(fdir, 7)[0])
+
+    def test_tests_only_handoff_blocked(self):
+        fdir = self._project()
+        self._write(fdir, "")
+        ok, msg = dh.gate(fdir, 7)
+        self.assertFalse(ok)
+        self.assertIn("real_run", msg)
+
+    def test_missing_or_empty_evidence_blocked(self):
+        for ev in (None, b""):
+            fdir = self._project(evidence=ev)
+            self._write(fdir, self.RR)
+            self.assertFalse(dh.gate(fdir, 7)[0])
+
+    def test_explicit_opt_out(self):
+        fdir = self._project(verify_app="none")
+        self._write(fdir, "")
+        self.assertTrue(dh.gate(fdir, 7)[0])
+
+    def test_in_flight_feature_warns_but_passes(self):
+        fdir = self._project(created="2026-10-19")
+        self._write(fdir, "")
+        ok, msg = dh.gate(fdir, 7)
+        self.assertTrue(ok)
+        self.assertIn("WARNING", msg)

@@ -17,6 +17,7 @@ A feature is **fully ATDD-covered** when its folder has `feature.md`, `acs.md`, 
 
 - **No `.engineer/manifest.yml`** → full onboard (Steps 1–11)
 - **Manifest exists** → gap-check mode (validate, report gaps, don't re-onboard)
+- **Manifest exists, no `verify_app`** → run Step 10b only (generate + proof-run the verify skill); CP7 is blocked until it exists
 
 **Not for:** starting a feature (`discuss` / `feature-init`, after onboard); changing an existing charter (edit it directly, PR'd).
 
@@ -98,13 +99,14 @@ breadcrumb.
    - `.engineer/consolidation.md`: the inventory as a **coverage table** (one row per feature, a column per coverage artifact) plus consolidation tasks in triage-priority order. Goal stated at the top: every row all-✅. Each task — "bring feature X to full ATDD coverage" — is bounded and **dispatchable to a remote agent**; note the suggested execution mode per task.
    - **Seed the tracker** — upsert a `TrackedFeature` row for *every* discovered feature (driver per `references/tracker.md`), not just the formalized ones, so the tracker shows the whole consolidation effort at a glance from day one. `status` from triage; `checkpoint` blank for features not yet in the DAE pipeline (`consolidation.md` tracks their coverage until they enter it).
 10. **Formalize the starting features** — with the human, pick the 1–2 highest-triage features and run `feature-init` (onboarding-intake mode) on each now, so the project leaves onboarding with momentum. The rest stay as backlog tasks — do NOT formalize all of them in one onboard run.
-11. **Handoff** — emit a summary; `recommended_next` points at the top consolidation-backlog task.
+10b. **Generate the verify skill + proof run** — write `.claude/skills/verify-<app>/SKILL.md` from the manifest `infra:` + `infra_quirks` and the repo's run instructions, per `${CLAUDE_PLUGIN_ROOT}/references/verify-app-skill.md`: Launch, Doctor, Drive, Evidence, Cleanup, plus a feature map (feature → how to reach it → what working looks like) seeded from the Step 7 discovery. Set `manifest.verify_app: verify-<app>` (or `none` only if the human confirms there is nothing runnable). Then **run the skill once** end to end, capturing evidence to `.engineer/evidence/onboard/`. **A failed proof run means onboard is not complete** — fix the skill and re-run; if you can't, emit `status: interrupted`.
+11. **Handoff** — emit a summary; `recommended_next` points at the top consolidation-backlog task. The `exit_criteria` include "verify skill proof run passed" (`verified_by: tool`, evidence = the `.engineer/evidence/onboard/` log path + the observed result).
 
 **Migration is not done inside `onboard`.** Moving `specs/NNN-slug/` → `features/NNN-slug/`, backfilling `acs.md`/`spec.md`, and generating acceptance tests are *consolidation tasks* — worked down feature by feature after onboarding, via the pipeline (`feature-init` → `discover-acs` reverse-engineer mode → `atdd:atdd` → pipeline generation), and dispatchable to remote agents. `onboard` only discovers, triages, and plans.
 
 ## Gap-check mode
 
-Manifest exists → don't re-onboard. Validate: `CHARTER.md` has all 7 sections; `manifest.yml` schema-valid; `features/` numbering monotonic; tracker config resolves; **roadmap config resolves and its host is still reachable** (MCP/CLI/API present; if it went unreachable, flag it — `next` will be running blind to the roadmap); charter roles == `manifest.team.default_roles`. If a *new* external roadmap source has appeared since onboarding (e.g. a `ROADMAP.md` was added), surface it as a re-migration offer rather than acting. Report gaps with suggested fixes (mirrors `consistency-check --project`).
+Manifest exists → don't re-onboard. Validate: `CHARTER.md` has all 7 sections; `manifest.yml` schema-valid; `features/` numbering monotonic; tracker config resolves; **roadmap config resolves and its host is still reachable** (MCP/CLI/API present; if it went unreachable, flag it — `next` will be running blind to the roadmap); charter roles == `manifest.team.default_roles`; `manifest.verify_app` is set and (unless `none`) `.claude/skills/<verify_app>/SKILL.md` exists, and its feature map has a row for every `features/*` folder with a user-facing surface (missing → suggest Step 10b or a feature-map update). If a *new* external roadmap source has appeared since onboarding (e.g. a `ROADMAP.md` was added), surface it as a re-migration offer rather than acting. Report gaps with suggested fixes (mirrors `consistency-check --project`).
 
 **Strictly read-only. Forbidden:**
 - `git checkout`, `git pull`, `git fetch`, `git merge`, `git rebase`, `git branch -d/-D` — no git state mutations of any kind.
