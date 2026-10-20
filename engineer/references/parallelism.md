@@ -12,23 +12,38 @@ actually is.
 run. The same step is sequential for a 2-file feature and a workflow for a
 200-file one.
 
-## The reflex — three questions per planned step
+Shapes use the standard names from
+`${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md` (Chain, Branch, Fan-out,
+Fan-in, Diamond, Star, Tree, Loop, Feedback, DAG).
+
+## The reflex — four questions per planned step
 
 Ask these against the concrete work (this feature's files / ACs / mutants, this
 project's features / modules), not the step in the abstract:
 
 1. **Decompose?** Does the work split into N independent units with no
    data-dependency between them? (changed files, ACs, surviving mutants,
-   discovered features, repo modules)
-2. **Quality pattern?** Would a repeatable multi-agent pattern raise confidence
-   here — adversarial-verify (skeptics try to refute each finding), judge-panel
-   (draft from N angles, score, synthesize), loop-until (repeat rounds until a
-   target or until dry)?
+   discovered features, repo modules) → **Fan-out**, or **Diamond** when the
+   results are merged.
+2. **Quality pattern?** Would a repeatable multi-agent shape raise confidence
+   here? The options are a **Star** (adversarial-verify: skeptics try to refute
+   each finding), a **Tree** (judge-panel: draft from N angles, score,
+   synthesize), or a **Loop** / **Feedback** (repeat rounds until a target or
+   until there is nothing left; it must declare a cap, see the loop rule below).
 3. **Independent siblings?** Are downstream steps/tasks mutually independent and
    runnable at once? (N specs = N TDD cycles; several features dispatchable
-   together) — parallel *step* execution, not just parallel items.
+   together) That is parallel *step* execution, not just parallel items.
+4. **Hardcoded or model?** For each node of the shape you picked, is its edge
+   hardcoded or handed to a model? Name the **one dynamic slot** (the router,
+   the count, the synthesis, the critic, the `again?` check) and hardcode the
+   rest. A shape where every edge is a model decision is not a shape anyone can
+   predict.
 
-If none fire → sequential, silently. No offer, no noise.
+If 1–3 do not fire → sequential (a **Chain**), silently. No offer, no noise.
+
+**The reflex fails** a loop with no cap or no no-progress stop, and a fan-out
+whose results nothing outside the fan-out checks. Both rules are in
+`${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md` ("Three rules").
 
 ## Skip-gate — stay sequential, say nothing
 
@@ -52,7 +67,7 @@ If none fire → sequential, silently. No offer, no noise.
 |---|---|---|
 | 1 | one agent, sequential | skip-gate hit (the default) |
 | 2 | several Agent-tool calls **in one message** (a plugin role agent from `agents/` when one fits — see `host-capabilities.md`) | small fixed fan-out (≈2–6), results fit context |
-| 3 | the **Workflow tool** (dynamic workflow) | large N, or a quality pattern (verify / judge-panel / loop-until) |
+| 3 | the **Workflow tool** (dynamic workflow) | large N, or a quality shape (Star / Tree / Loop) |
 
 Workflows are paid-plan + version-gated and may be off. Unavailable → **degrade**
 3→2→1; never hard-fail on the substrate. Parallel agents that **edit files in
@@ -104,20 +119,21 @@ flood it.
 Recognise these fast — but the trigger is always the real work, and any of them
 stays sequential when this feature's N is small:
 
-| Where | Decomposes over | Pattern | Tier | Model class |
+| Where | Decomposes over | Shape (DAE name) | Tier | Model class |
 |---|---|---|---|---|
-| onboard — discover features | modules × discovery angles | multi-modal sweep | 3 | economy |
-| refine — review changed code | files × dimensions | fan-out + adversarial charter-verify | 3 | inherit |
-| harden (feature + fix mode) — mutation | surviving mutants | loop-until-score | 3 | inherit |
-| harden — introversion confirm | flagged vacuous tests | fan-out + verify | 2/3 | economy |
-| harden — formal checks | selected TLA+/Lean targets | fan-out, plain subagents (not fork-safe) | 3 | frontier |
-| consistency-check `--project` | features | fan-out (judgment checks) | 3 | economy |
-| progress-log `--project` | features → tracker | fan-out | 2/3 | economy |
-| plan — propose architecture | design angles (MVP / risk / reuse-first) | judge-panel → human picks | 2 | inherit |
-| discover-acs (reverse-eng) | the four passes over existing material | multi-modal sweep → dedup | 2 | inherit |
-| fix — investigate | top-3 candidate features | parallel prime-context | 2 | economy |
-| **CP2/CP4 exit — review panel** | the two standing roles | adviser + advocate, concurrent | 2 | frontier / inherit |
-| **CP5 exit — gauntlet** | rounds against a declared bar | loop-until (builder ↔ fresh critic) | 3 | inherit / frontier |
+| onboard — discover features | modules × discovery angles | Diamond (multi-modal sweep → dedup) | 3 | economy |
+| refine — review changed code | files × dimensions | Diamond → Star (adversarial charter-verify) | 3 | inherit |
+| harden (feature + fix mode) — mutation | surviving mutants | Loop (loop-until-score; cap = survivors at start) | 3 | inherit |
+| harden — introversion confirm | flagged vacuous tests | Fan-out → Star | 2/3 | economy |
+| harden — formal checks | selected TLA+/Lean targets | Diamond, plain subagents (not fork-safe) | 3 | frontier |
+| consistency-check `--project` | features | Fan-out (judgment checks) | 3 | economy |
+| progress-log `--project` | features → tracker | Fan-out | 2/3 | economy |
+| plan — propose architecture | design angles (MVP / risk / reuse-first) | Tree (judge-panel → human picks) | 2 | inherit |
+| discover-acs (reverse-eng) | the four passes over existing material | Diamond (multi-modal sweep → dedup) | 2 | inherit |
+| fix — investigate | top-3 candidate features | Fan-out (parallel prime-context) | 2 | economy |
+| **CP2/CP4 exit — review panel** | the two standing roles | Star (adviser + advocate, concurrent) | 2 | frontier / inherit |
+| **CP5 exit — gauntlet** | rounds against a declared bar | Feedback (builder ↔ fresh critic, cap 5) | 3 | inherit / frontier |
+| **a whole feature — `/engineer.run`** | the checkpoints between human gates | DAG of segments; the coordinator is the dynamic slot | 1–3 per segment | inherit |
 
 **Tier** above is the parallelism substrate (1/2/3); **Model class** is a
 different axis — `economy` / `inherit` / `frontier`, never a product name, because
@@ -141,6 +157,8 @@ extra and keeps the decision next to the plan it changes.
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/graph-shapes.md` — the shape catalogue, the loop rule, outside evidence, the pipeline walked shape by shape
+- `${CLAUDE_PLUGIN_ROOT}/references/coordinator.md` — `/engineer.run`, which applies this reflex across a whole feature
 - `${CLAUDE_PLUGIN_ROOT}/references/progress-indicator.md` — Indicator 2, where this reflex fires
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — autonomy source; cloud-vs-local channel for a dispatched agent
 - The Claude Code dynamic-workflows docs — the Tier-3 substrate

@@ -13,7 +13,7 @@ The behavior contract (ACs + specs) is sacred — a refactor that breaks it is a
 
 Checkpoint 6, after `atdd:atdd-team` produces passing code, before `crap-analyzer` (Checkpoint 7).
 
-**Verification independence:** if `manifest.verification.apply_to_checkpoints` includes `6`, refine must run on a non-implementer agent. The three review subagents (Step 2) are fresh regardless, so independence is satisfied by construction.
+**Verification independence:** refine runs on a non-implementer agent (`agent_id` ≠ CP5's; enforced by `dae_handoff.py gate()`). The three review subagents (Step 2) are fresh regardless, so independence is satisfied by construction.
 
 **Not for:** changing behavior (`feature-edit`); risk analysis (`crap-analyzer`); code that isn't implemented/green yet.
 

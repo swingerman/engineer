@@ -143,7 +143,10 @@ Now implement the feature using standard TDD:
 1. Write a failing unit test for the smallest piece of the feature
 2. Write minimal code to make it pass
 3. Refactor
-4. Repeat until the acceptance tests pass
+4. Repeat until the acceptance tests pass. The loop is capped: at most 2 × the
+   acceptance tests failing at the start, and stop early if a few rounds in a
+   row turn no test green (`manifest.autonomy.stuck_loop_threshold`, default 3).
+   Either stop means surface the still-red tests rather than keep going.
 
 **Faster iteration with impact analysis:** if the project has
 `acceptance.impact_analysis: on`, the runner's impact-run mode (`dae_impact.py

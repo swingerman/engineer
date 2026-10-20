@@ -39,7 +39,7 @@ makes the *missing* checks obvious. Add a constraint by naming its kind first.
 | **functional** | at most one holder ("exactly one father") | one feature branch per feature; one feature per roadmap item; `ac_count` == ACs present; `slug` == its folder |
 | **inverse** | two properties must agree both ways | `parent_feature` ↔ `child_features` |
 | **transitive** | the relation chains, so it must not cycle | `parent_feature` loops |
-| **disjoint** | two roles, never the same individual | Principle 7: the verifier is not the implementer |
+| **disjoint** | two roles, never the same individual | Principle 7: the refiner is not the implementer; the verifier is neither |
 | **closure** | every X reachable from some Y | every AC has a `@AC-N` scenario; every tagged AC exists |
 
 ## The coverage join — the part prose cannot do

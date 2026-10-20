@@ -82,6 +82,15 @@ PROTOTYPE_OVERRIDES = {
 # Every agentic stage opens the same way. A stage whose agent has not said what
 # done looks like has no way to know when to stop, and the human reviewing it
 # has nothing to review against.
+# Every feature stage can hand the rest of the feature to the coordinator, which
+# resumes from the latest complete checkpoint (references/coordinator.md).
+RUN = "/engineer.run"
+RUN_OFFER = (
+    "\n\nTo drive the rest of the feature in one coordinated run instead, "
+    "use `/engineer.run <slug>`: it resumes from the latest complete "
+    "checkpoint and stops only at the front and back gates."
+)
+
 GOAL_PREAMBLE = (
     "Start by setting the goal for this stage with `/goal`, including an "
     "explicit definition of done. State it before you touch anything.\n\n"
@@ -109,15 +118,17 @@ def sid(num):
     return str(num)
 
 
-def entry_stage():
+def entry_stage(offer_run=True):
     """The entry, which is not a checkpoint: feature-init creates the folder.
 
     Prototype-first skips it — there the folder is created by the convert pivot
     once the prototype has converged.
     """
     return stage(
-        "feature", "Feature", ["/engineer.feature-init"], "none", "decision",
-        "Create the feature and state the outcome it is meant to produce.",
+        "feature", "Feature",
+        ["/engineer.feature-init"] + ([RUN] if offer_run else []), "none", "decision",
+        "Create the feature and state the outcome it is meant to produce."
+        + (RUN_OFFER if offer_run else ""),
         "The folder exists and the outcome is written down.",
     )
 
@@ -133,7 +144,8 @@ def feature_stages(overrides=None):
         if num not in table:
             continue
         skills, gate, attention, pick_up = table[num]
-        out.append(stage(sid(num), label, skills, gate, attention, pick_up,
+        out.append(stage(sid(num), label, skills + [RUN], gate, attention,
+                         pick_up + RUN_OFFER,
                          f"CP{sid(num)} — {label}."))
     return out
 
@@ -179,7 +191,7 @@ def express_stages():
     lifecycle at CP2 — the item is rebound, the branch and tracker row kept.
     """
     return [
-        entry_stage(),
+        entry_stage(offer_run=False),  # XS never takes the coordinator
         stage(
             "express", "Express",
             ["/engineer.express"], "review", "review",
