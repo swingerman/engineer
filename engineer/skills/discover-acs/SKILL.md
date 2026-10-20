@@ -82,6 +82,7 @@ ACs ship with `human_action_needed: yes` (the human owns the AC contract) — so
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — when to dispatch vs stop
 - `${CLAUDE_PLUGIN_ROOT}/references/review-panel.md` — the Step 8 adviser + advocate gate
 - `${CLAUDE_PLUGIN_ROOT}/references/ac-coverage/README.md` — index of domain-aware coverage checklists

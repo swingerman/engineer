@@ -58,5 +58,6 @@ Three records, three readers: `handoffs/` = machine, per-invocation; `progress.m
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - [Foundation Design](https://www.notion.so/3585ecdee0e2811bbc67ff4913c03207) — `session-log.md` in the storage layout, the session-log ↔ handoffs distinction (Section 5)
 - `engineer/scripts/dae_infra.py` — invoked here at session end

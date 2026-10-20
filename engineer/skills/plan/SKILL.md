@@ -56,6 +56,7 @@ The handoff MUST include the `exit_criteria` block asserting each of Checkpoint 
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — when to dispatch vs stop
 - `${CLAUDE_PLUGIN_ROOT}/references/review-panel.md` — the Step 6 adviser + advocate gate
 - [Foundation Design](https://www.notion.so/3585ecdee0e2811bbc67ff4913c03207) — the structured Charter Check (Section 3)

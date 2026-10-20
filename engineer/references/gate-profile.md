@@ -14,7 +14,7 @@ A feature has **two** human decision gates, not one-per-checkpoint:
 | Gate | Where | What the human owns |
 |---|---|---|
 | **Front** | after CP4 (plan) | ACs + spec + architecture, reviewed **together, once** |
-| — middle — | CP5–6 (build / refine) | **nothing** — deterministic gates + the gauntlet loop; the human *watches*, does not approve round-to-round |
+| — middle — | CP5–6 (build / refine) | **nothing**: deterministic gates + the gauntlet loop; the human *watches*, does not approve round-to-round |
 | **Back** | verify + harden (CP7/CP8) | did it actually work, and would the tests catch it breaking. CP8's check choice follows effective autonomy: at `high` the refinement-advisor decides alone |
 
 The middle is already autonomous at `medium`/`high` autonomy (see

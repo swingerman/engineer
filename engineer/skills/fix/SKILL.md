@@ -134,6 +134,7 @@ This is informational — the close step happens before merge, so cleanup can't 
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - `references/artifact-template.md` — canonical `.engineer/fixes/<slug>.md` schema
 - `references/regression-spec-template.md` — Given/When/Then template used in Step 3
 - `references/gap-analysis-categories.md` — closed vocabulary + blocker rule

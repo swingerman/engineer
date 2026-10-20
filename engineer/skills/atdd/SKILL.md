@@ -86,6 +86,7 @@ approved the spec.
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — when to dispatch vs stop
 - [Foundation Design](https://www.notion.so/3585ecdee0e2811bbc67ff4913c03207) —
   the Checkpoint Exit Contract (Section 8)
