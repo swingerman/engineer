@@ -15,6 +15,38 @@ Otherwise, findings are advisory. Advisory followups land in `.engineer/consolid
 
 ---
 
+## Enforcement level
+
+Naming the phase that leaked is half a finding. The other half is how the lesson gets enforced, so the same class of bug can't come back. Every finding except `none` carries `enforcement_level`, from strongest to weakest:
+
+1. `architecture`: the wrong code can't be written (module boundary, arch-check rule, a single choke point).
+2. `type`: the type system rejects it.
+3. `lint`: a lint rule or a script check fails on it.
+4. `test`: a test catches it after it is written.
+5. `doc`: an AC, spec or note says not to do it.
+
+Pick the strongest level that works. Anything below `architecture` needs `level_reason`: why no stronger level works.
+
+**Repeat rule.** If any earlier fix in `.engineer/fixes/` recorded the same category, this finding is a repeat. A repeat must land at `architecture`, `type` or `lint`, never `test` or `doc`. It also sets `rule:` to the row it adds to `.engineer/rules.md`.
+
+`dae_fix.py --validate` enforces all three: a missing level, a missing reason, and a repeat at `test`/`doc` or with no rules row. Fixes dated before `dae_handoff.REAL_RUN_CUTOFF` get warnings instead.
+
+## Rules table: `.engineer/rules.md`
+
+One row per project rule, paired with what enforces it:
+
+```markdown
+| Rule | Enforced by |
+|---|---|
+| Handlers never call the DB directly | arch: arch-check layer rule handlers -/-> db |
+| Money is integer cents | type: Cents newtype in billing/money.py |
+| No raw SQL strings | script: scripts/lint_sql.py |
+```
+
+`Enforced by` starts with `script:`, `type:`, `arch:` or `test:`. A rule with nothing enforcing it is a gap, and `--validate` warns about it. A missing `rules.md` is also a warning.
+
+---
+
 ## Categories
 
 ### `missing_ac`

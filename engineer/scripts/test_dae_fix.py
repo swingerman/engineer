@@ -993,5 +993,46 @@ class TestReproBeforeFix(unittest.TestCase):
             self.assertTrue(warnings and not errors)
 
 
+class TestEnforcementLadder(unittest.TestCase):
+    """Each finding names a level; below architecture needs a reason; a repeated
+    category must land at architecture/type/lint and name its rules.md row."""
+
+    def test_gate(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixes = os.path.join(root, "fixes")
+            os.makedirs(fixes)
+            rec = {"slug": "2026-10-20-b", "title": "B", "status": "gap-analyzed",
+                   "gap_analysis": [{"category": "missing_ac", "enforcement_level": "doc",
+                                     "level_reason": "pure wording, no code path"}]}
+            check = lambda **g: dae_fix.ladder_check(  # noqa: E731
+                dict(rec, gap_analysis=[dict(rec["gap_analysis"][0], **g)]), fixes)
+            errors, warnings = check()
+            self.assertEqual(errors, [])
+            self.assertIn("rules.md not found", warnings[0])
+            self.assertIn("enforcement_level", check(enforcement_level=None)[0][0])
+            self.assertIn("level_reason", check(level_reason="")[0][0])
+            self.assertEqual(check(enforcement_level="architecture", level_reason="")[0], [])
+            self.assertEqual(dae_fix.ladder_check(
+                dict(rec, gap_analysis=[{"category": "none"}]), fixes), ([], []))
+            # an earlier fix recorded the same category: doc/test no longer close it
+            with open(os.path.join(fixes, "2026-10-01-a.md"), "w") as f:
+                f.write("---\nslug: 2026-10-01-a\ntitle: A\ngap_analysis:\n"
+                        "  - category: missing_ac\n---\n")
+            self.assertIn("repeats", check()[0][0])
+            self.assertIn("repeats", check(enforcement_level="test")[0][0])
+            self.assertEqual(check(enforcement_level="lint")[0], [])  # no rules.md: warn only
+            with open(os.path.join(root, "rules.md"), "w") as f:
+                f.write("| Rule | Enforced by |\n|---|---|\n| no raw sql | script: lint_sql.py |\n"
+                        "| ids are uuids | |\n")
+            errors, warnings = check(enforcement_level="lint")
+            self.assertIn("rule:", errors[0])
+            self.assertIn("ids are uuids", warnings[0])
+            self.assertEqual(check(enforcement_level="lint", rule="no raw sql")[0], [])
+            # older fixes only warn; the earlier fix itself is not a repeat
+            errors, warnings = dae_fix.validate(dict(rec, slug="2026-10-19-b"), fixes)
+            self.assertTrue(any("in-flight" in w for w in warnings) and not errors)
+            self.assertEqual(dae_fix.ladder_check(dict(rec, slug="2026-10-01-a"), fixes)[0], [])
+
+
 if __name__ == "__main__":
     unittest.main()

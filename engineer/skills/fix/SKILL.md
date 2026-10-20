@@ -105,7 +105,7 @@ Set `status: hardened`.
 
 ### Step 8 — Gap analysis ("why didn't we catch it?")
 
-For each affected feature, identify which DAE phase leaked. Use the closed vocabulary in `references/gap-analysis-categories.md` — one entry per distinct finding.
+For each affected feature, identify which DAE phase leaked. Use the closed vocabulary in `references/gap-analysis-categories.md` — one entry per distinct finding. Each finding names an `enforcement_level` (strongest that works, with `level_reason` if below `architecture`). A category an earlier fix already recorded must land at `architecture`, `type` or `lint` and add its row to `.engineer/rules.md`.
 
 **CONFIRM-FIRST:** present findings to the user for approval before writing to the artifact. Findings are claims about methodology gaps; the user is the source of truth.
 
