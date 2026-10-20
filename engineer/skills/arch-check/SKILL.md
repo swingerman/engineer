@@ -55,6 +55,18 @@ summary for the handoff: max CRAP, the offenders over
 `quality_thresholds.crap_max`, and the command. It is external and writes no
 handoff of its own, so this is where CP8's refinement-advisor reads it.
 
+### Step 1.6 — Real-app run
+
+Read `manifest.verify_app`. Unless it is `none`, invoke that project skill
+(`.claude/skills/<verify_app>/SKILL.md`) for this feature's feature-map rows:
+Launch → Doctor → Drive → Evidence → Cleanup, writing evidence to
+`features/<slug>/evidence/`. No row for this feature → add it first (see
+`${CLAUDE_PLUGIN_ROOT}/references/verify-app-skill.md`). A failing run is a
+verification failure, not a skip. For features created on or after the
+cutoff, `dae_handoff.py` refuses a CP7 handoff that has no `real_run` block
+with existing evidence files. Passing tests don't count. Older features pass
+with a warning.
+
 ### Step 2 — Present violations
 
 Group the violations by kind (layering first — it is the architectural-vision
@@ -82,7 +94,9 @@ Emit a summary per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`.
 criterion with `verified_by: tool` and the `dae_arch.py` exit status as evidence,
 and carries crap-analyzer's summary as a `crap_results` block (`max_crap`,
 `offenders: [{symbol, file, crap, coverage}]`, `command`). CP8's harden and
-refinement-advisor read that block.
+refinement-advisor read that block. On an onboarded project it also carries
+the `real_run` block (`skill`, `evidence` paths) and a "feature works in the
+real app" criterion, `verified_by: tool`, quoting the observed result.
 `recommended_next`: "/engineer.harden (CP8)".
 
 ## References

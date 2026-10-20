@@ -29,6 +29,9 @@ exit_criteria:                       # required on checkpoint-advancing skills
     verified_by: <tool | human | judgment>
     met: <true | false>
     evidence: <one line; for `tool`, the command + its output>
+real_run:                            # required at CP7 on an onboarded project (dae_handoff.py gate)
+  skill: <manifest.verify_app>
+  evidence: [<paths captured from the running app>]   # see references/verify-app-skill.md
 panel_findings:                      # required when a review panel ran (CP2/CP4)
   - role: <adviser | advocate>
     severity: <error | advisory>

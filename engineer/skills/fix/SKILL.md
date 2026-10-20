@@ -89,7 +89,7 @@ Invoke `engineer:refine` on touched code. Set `status: refined`.
 
 ### Step 6 — Verify (CP7)
 
-Run `engineer:arch-check` on each touched feature. Run `crap-analyzer` on the fix diff. Record results. Set `status: verified`.
+Run `engineer:arch-check` on each touched feature. Run `crap-analyzer` on the fix diff. Run the project's `verify-<app>` skill (`manifest.verify_app`, unless `none`) to reproduce the original report's path in the real app and show it now works; record its evidence paths as `real_run`. Record results. Set `status: verified`.
 
 ### Step 7 — Harden (CP8 + CONFIRM-FIRST GATE 2)
 

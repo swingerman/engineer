@@ -23,7 +23,7 @@ Any time an existing feature's artifacts must change. `checkpoint: null`.
 4. **Build the edit plan** — the cascade runs **strictly downstream** (`feature.md → acs.md → spec.md → plan.md`); upstream problems are surfaced, never auto-propagated. Per downstream artifact, classify by blast radius: small/mechanical → feature-edit edits directly; substantial → invoke the owning skill (`discover-acs` / `atdd:atdd` / `plan`) in edit-pass mode.
 5. **Present the plan; human confirms** — show entry artifact, cascade, and how each step is handled. Nothing is written before confirmation.
 6. **Execute** — in cascade order: direct edits and owning-skill invocations; regenerate `.build/spec.json` after any `spec.md` change; re-run affected test streams if code exists. If regeneration reveals an upstream problem, stop and surface it.
-7. **Sync** — update `progress.md` (affected checkpoint rows) and the tracker via the driver.
+7. **Sync** — update `progress.md` (affected checkpoint rows) and the tracker via the driver. If the edit adds or changes a user-facing surface (route, command, screen), update that feature's row in the `verify-<app>` feature map (`${CLAUDE_PLUGIN_ROOT}/references/verify-app-skill.md`).
 8. **Handoff** — emit a summary.
 
 ## Handoff
