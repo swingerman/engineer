@@ -43,6 +43,20 @@ pin_confirmation:
 fix_commits:
   - "a1b2c3d fix: guard expired-token redirect in SessionMiddleware"
 
+attempts:                                    # Step 4 — one entry per attempt, appended BEFORE the attempt
+  - gate: regression-spec
+    result: fail                              # pending | pass | fail
+  - gate: regression-spec
+    result: fail
+  - gate: regression-spec                     # 3rd+ attempt after 2 fails on a gate: premise required
+    result: pass
+    premise:
+      belief: "SessionMiddleware redirects before the token-refresh hook runs"
+      observation: "if false, the refresh hook logs before the first redirect"
+      command: "pytest tests/auth/test_redirect.py -k expired -s"
+      output: "redirect /login; redirect /dashboard; no refresh line"
+      falsified: false                        # true → re-diagnose (Step 2), new premise, no code
+
 harden_results:                              # written by /engineer.harden (fix mode) + fix Step 7
   advisor: {decided_by: human, rows: [{tool: atdd-mutate, verdict: recommend, target: "src/auth/session.py", selected: true}]}
   introversion: {skipped: "no test files changed besides the regression spec"}
@@ -75,5 +89,5 @@ investigating → pinned-pending → pinned → fixed → refined → verified �
 ```
 
 Each status is written by the skill step that completes it (Steps 1–9).
-`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, and gap_analysis category membership.
+`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, gap_analysis category membership, and that any attempt after two failures on the same gate carries a complete, unfalsified `premise:`.
 `dae_fix.py close_ready(rec)` enforces the close gate: pin confirmed + hardened (including bug-line gate) + gap_analysis non-empty + no unresolved blockers.
