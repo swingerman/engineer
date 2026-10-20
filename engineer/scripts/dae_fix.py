@@ -62,6 +62,7 @@ def parse_fix(text):
         "gap_analysis": [],
         "followups": [],
         "handoff_path": None,
+        "attempts": [],
     }
 
     fm = dae_resolve.extract_frontmatter(text)
@@ -183,7 +184,49 @@ def parse_fix(text):
     if isinstance(handoff_path, str):
         rec["handoff_path"] = handoff_path
 
+    # attempts: ordered log of fix attempts, [{gate, result, premise?}]
+    attempts = data.get("attempts")
+    if isinstance(attempts, list):
+        rec["attempts"] = attempts
+
     return rec
+
+
+PREMISE_FIELDS = ("belief", "observation", "command", "output")
+
+
+def attempt_errors(rec):
+    """Once two attempts on a gate have failed, every later attempt on that gate
+    must carry a premise: block — the root-cause belief being acted on, an
+    observation that would come out differently if it were false, and the
+    command + output that ran it — with falsified: false. A falsified premise
+    blocks the attempt until the agent re-diagnoses and records a new one.
+    """
+    errors = []
+    failed = {}
+    for i, a in enumerate(rec.get("attempts") or []):
+        if not isinstance(a, dict) or not a.get("gate"):
+            errors.append("attempts[%d] must be a mapping with a gate" % i)
+            continue
+        gate = str(a["gate"])
+        if failed.get(gate, 0) >= 2:
+            where = "attempts[%d] (gate %r, after %d failed attempts)" % (i, gate, failed[gate])
+            premise = a.get("premise")
+            if not isinstance(premise, dict):
+                errors.append("%s requires a premise: block %s — re-check the root-cause belief "
+                              "before another patch" % (where, list(PREMISE_FIELDS) + ["falsified"]))
+            else:
+                missing = [f for f in PREMISE_FIELDS if not premise.get(f)]
+                if missing:
+                    errors.append("%s premise missing %s" % (where, missing))
+                if premise.get("falsified") is True:
+                    errors.append("%s premise was falsified by its observation — re-diagnose and "
+                                  "record a new premise before writing code" % where)
+                elif premise.get("falsified") is not False:
+                    errors.append("%s premise.falsified must be true or false" % where)
+        if a.get("result") == "fail":
+            failed[gate] = failed.get(gate, 0) + 1
+    return errors
 
 
 def validate_fix(rec):
@@ -237,6 +280,8 @@ def validate_fix(rec):
                 "gap_analysis[%d].category %r must be one of %s"
                 % (i, category, sorted(GAP_ANALYSIS_CATEGORIES))
             )
+
+    errors.extend(attempt_errors(rec))
 
     # When status == 'closed', enforce close-step preconditions at schema time.
     # The mmc audit showed 5 fixes with status: closed but only 2 handoffs —

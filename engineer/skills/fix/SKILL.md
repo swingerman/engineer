@@ -81,6 +81,8 @@ Present the spec(s) and red-run evidence to the user for confirmation before pro
 
 Implement the fix using the same discipline as Checkpoint 5. The regression spec must turn GREEN. Update `fix_commits`. Set `status: fixed`.
 
+**Attempt log.** Before each attempt at a gate (the regression spec, the bug-line gate, any check that must pass), append `{gate, result: pending}` to `attempts:` and run `dae_fix.py --validate`; set `result: pass|fail` once the gate runs. After two `fail`s on the same gate, `--validate` refuses the next attempt on that gate unless the entry has a `premise:` block: the root-cause `belief` being acted on, an `observation` that would come out differently if the belief were false, the `command` run to check it, its `output`, and `falsified: true|false`. Two failed fixes usually mean the belief is wrong, not the patch. If the observation falsifies the belief (`falsified: true`), validation still fails: go back to Step 2, re-diagnose, and record a new premise before writing any code.
+
 ### Step 5 — Refine (CP6)
 
 Invoke `engineer:refine` on touched code. Set `status: refined`.

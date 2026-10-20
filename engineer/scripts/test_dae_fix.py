@@ -919,5 +919,30 @@ class TestRenderConsolidationEntries(unittest.TestCase):
         self.assertEqual(entries, [])
 
 
+class TestAttemptPremiseGate(unittest.TestCase):
+    """A 3rd attempt on a gate after 2 failures needs a tested, unfalsified premise."""
+
+    HEAD = "---\nslug: 2026-05-25-x\ntitle: X\nattempts:\n"
+    FAIL = "  - gate: spec\n    result: fail\n"
+    PREMISE = ("    premise:\n      belief: b\n      observation: o\n"
+               "      command: c\n      output: out\n      falsified: %s\n")
+
+    def errors(self, body):
+        return dae_fix.attempt_errors(dae_fix.parse_fix(self.HEAD + body + "---\n"))
+
+    def test_gate(self):
+        third = "  - gate: spec\n    result: pending\n"
+        self.assertEqual(self.errors(self.FAIL * 2), [])
+        self.assertEqual(self.errors(self.FAIL * 2 + "  - gate: other\n    result: pending\n"), [])
+        self.assertIn("requires a premise", self.errors(self.FAIL * 2 + third)[0])
+        self.assertEqual(self.errors(self.FAIL * 2 + third + self.PREMISE % "false"), [])
+        self.assertIn("falsified", self.errors(self.FAIL * 2 + third + self.PREMISE % "true")[0])
+        # 4th attempt needs its own premise, not the 3rd's
+        self.assertTrue(self.errors(self.FAIL * 2 + third + self.PREMISE % "false" + third))
+        # validate_fix surfaces it
+        rec = dae_fix.parse_fix(self.HEAD + self.FAIL * 3 + "---\n")
+        self.assertTrue(any("premise" in e for e in dae_fix.validate_fix(rec)))
+
+
 if __name__ == "__main__":
     unittest.main()
