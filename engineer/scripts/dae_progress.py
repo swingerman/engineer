@@ -8,14 +8,19 @@ sits above the checkpoint altitude.
 Advisory and read-only — it produces no artifact and never blocks a skill.
 
 Usage:
-  dae_progress.py <feature-dir>     print the pipeline breadcrumb
+  dae_progress.py <feature-dir>          print the pipeline breadcrumb
+  dae_progress.py <feature-dir> --json   the breadcrumb plus the state the
+                                         engineer mods show: current CP,
+                                         run-graph segment, latest handoff
 """
+import json
 import os
 import re
 import sys
 
 import dae_delegable
 import dae_handoff
+import dae_resolve
 
 # The canonical DAE pipeline — the single source of truth for stage order and
 # names. CP5 (Implement) is a stop with no dedicated engineer skill.
@@ -153,9 +158,55 @@ def breadcrumb(feature_dir):
     return render_breadcrumb(feature_name, done, header["cp"], detail, roadmap)
 
 
+def _read_yaml(path, frontmatter=False):
+    """A kit-YAML file (or its frontmatter) as a dict; {} when absent or bad."""
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    if frontmatter:
+        text = dae_resolve.extract_frontmatter(text) or ""
+    try:
+        data = dae_resolve.read_manifest(text)
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def state(feature_dir):
+    """Everything the engineer mods draw for a feature, from one read."""
+    progress_path = os.path.join(feature_dir, "progress.md")
+    header = None
+    if os.path.isfile(progress_path):
+        with open(progress_path, encoding="utf-8") as f:
+            header = parse_current_header(f.read())
+    cp = header["cp"] if header else None
+    segment = next(
+        (s.get("name") for s in _read_yaml(
+            os.path.join(feature_dir, "run-graph.yml")).get("segments") or []
+         if isinstance(s, dict) and cp in (s.get("checkpoints") or [])), None)
+    last = dae_handoff._last_handoff(feature_dir)
+    last_path = os.path.join(feature_dir, "handoffs", last) if last else None
+    handoff = _read_yaml(last_path, frontmatter=True) if last_path else {}
+    fm = dae_delegable.load_frontmatter(feature_dir) or {}
+    return {
+        "breadcrumb": breadcrumb(feature_dir),
+        "cp": cp,
+        "met": header["met"] if header else None,
+        "total": header["total"] if header else None,
+        "segment": segment,
+        "autonomy_level": fm.get("autonomy_level"),
+        "last_handoff": last_path,
+        "human_action_needed": str(handoff.get("human_action_needed", "")).lower() in ("yes", "true"),
+    }
+
+
 def main(argv):
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__)
+        return 0
+    if "--json" in argv:
+        print(json.dumps(state(argv[0])))
         return 0
     print(breadcrumb(argv[0]))
     return 0

@@ -81,6 +81,10 @@ automatically; for an external/self write, ask first with the specific action
 named. (This is why the auto-mode safety classifier kept blocking these — the
 skill should ask proactively instead of relying on the net.)
 
+Where the engineer mods load, a hook enforces this list for shell pushes and
+`gh pr create|merge`: it asks the person in a dialog and denies without a yes.
+Ask anyway; the hook is the net, not the plan.
+
 **The one carve-out — `verify: auto` merge.** A feature whose
 `gate_profile.verify` is `auto` may **auto-merge its own PR without asking** —
 but only when `${CLAUDE_PLUGIN_ROOT}/scripts/dae_mergeready.py <feature-dir>`

@@ -85,6 +85,12 @@ class into a skill either.
 
 ## Why the classes are shaped this way
 
+**Real numbers first.** Where the engineer mods load (`host-capabilities.md`,
+host hooks), the `mcp__engineer__cost_ledger` tool returns the actual tokens and
+minutes per role × class × shape across past sessions. Use those over the
+analysis below and the priors in `parallelism.md`; fall back to them only for a
+combination the ledger has not seen.
+
 A cost observation from 21 DAE sessions (2026-07-10 → 07-29). The specific
 numbers date quickly; the *shape* is what the classes encode:
 

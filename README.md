@@ -231,7 +231,7 @@ pipeline and on the roadmap.
 
 | Plugin | Purpose | Version |
 |---|---|---|
-| **[`engineer`](engineer/)** | The DAE methodology kit — 25 skills, 6 role agents, 26 guardrail scripts, the checkpoint pipeline | 0.33.0 |
+| **[`engineer`](engineer/)** | The DAE methodology kit — 25 skills, 6 role agents, 26 guardrail scripts, the checkpoint pipeline, host mods | 0.40.0 |
 | **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.4 |
 | **[`crap-analyzer`](crap-analyzer/)** | Change Risk Anti-Pattern analysis on changed code | 0.1.1 |
 
@@ -409,7 +409,7 @@ the contract**. `engineer/references/host-capabilities.md` holds the seam:
 | | Capabilities |
 |---|---|
 | **Required** | dispatch a fresh agent · filesystem · script execution |
-| **Optional** | progress surface · structured ask · orchestration · isolation · remote execution · peer messaging · tool channels · rendered views |
+| **Optional** | progress surface · structured ask · orchestration · isolation · remote execution · peer messaging · tool channels · rendered views · host hooks |
 
 Every optional capability has a specified degradation, so a host that lacks one
 loses a convenience, never the methodology. **Porting is editing that table's
@@ -419,6 +419,13 @@ The same discipline applies to models: `engineer/references/model-classes.md`
 names capability *classes* — `economy` / `inherit` / `frontier` — rather than
 product names, which get deprecated, and resolves them against the host's live
 model list at dispatch time.
+
+On Claude Code builds with function hooks, `engineer/hooks/register.tsx` adds
+the **engineer mods**: a progress sync that runs after every handoff write,
+guards that deny what the docs already forbid (frontier on a loop, an uncapped
+loop, unconfirmed pushes and PRs, a verifier editing code), a pipeline band
+above the prompt, a `/dae` pane and status line, a cross-session cost ledger,
+and a role re-anchor after compaction. Without them the pipeline runs as written.
 
 Optional capabilities are used when present and never depended on. A rendered
 board is a better answer to "where are we" than four lines of breadcrumb, so DAE
@@ -521,7 +528,8 @@ it adapts the methodology.
 │   │                        #   graph shapes, coordinator
 │   ├── scripts/             # dae_*.py guardrails + their unit tests
 │   ├── skills/              # the 25 engineer skills
-│   └── examples/            # optional host hook configs
+│   ├── examples/            # optional host hook configs
+│   └── hooks/ tests/        # engineer mods (function hooks) + their tests
 │
 └── crap-analyzer/           # change-risk analysis plugin
 ```
