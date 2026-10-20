@@ -213,10 +213,11 @@ export const register: Register = (on, options) => {
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const actions = await externalWrites(e.command, () =>
-      // Where an implicit push actually goes (@{push}); with no upstream yet, the branch itself.
-      $.process.run(['git', 'rev-parse', '--abbrev-ref', '@{push}'])
-        .then(r => (r.exitCode === 0 ? r : $.process.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])))
-        .then(r => /(^|\/)(main|master)$/.test(r.stdout.trim()), () => false))
+      // A bare push goes to @{push}, `push <remote> HEAD` to the branch's own name: gate on either.
+      Promise.all(['@{push}', 'HEAD'].map(ref =>
+        $.process.run(['git', 'rev-parse', '--abbrev-ref', ref])
+          .then(r => r.exitCode === 0 && /(^|\/)(main|master)$/.test(r.stdout.trim()), () => false)))
+        .then(hits => hits.some(Boolean)))
     if (actions.length === 0) return next(e)
     // The one carve-out: verify:auto may open and merge its own PR when the bar is green.
     if (actions.every(a => a.endsWith('(current branch)')) && (await mergeReady($))) return next(e)
