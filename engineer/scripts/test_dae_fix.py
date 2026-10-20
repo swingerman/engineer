@@ -155,9 +155,6 @@ class TestValidateFix(unittest.TestCase):
             "blocks_user": True,
             "workaround": "refresh the page",
             "gap_analysis": [{"category": "architecture_violation"}],
-            "fix_commits": ["b2 fix"],
-            "regression_evidence": {"repro_commit": "a1", "command": "t",
-                                    "fail_output": "1 failed", "pass_output": "1 passed"},
         }
         errors = dae_fix.validate_fix(rec)
         self.assertEqual(errors, [])
@@ -242,9 +239,6 @@ class TestValidateFix(unittest.TestCase):
             },
             "gap_analysis": [{"category": "none"}],
             "followups": [],
-            "fix_commits": ["b2 fix"],
-            "regression_evidence": {"repro_commit": "a1", "command": "t",
-                                    "fail_output": "1 failed", "pass_output": "1 passed"},
         }
 
     def test_validate_fix_closed_happy_path(self):
@@ -966,22 +960,37 @@ class TestReproBeforeFix(unittest.TestCase):
             repro, fix = commit("repro"), commit("fix")
             ev = {"repro_commit": repro, "command": "t", "fail_output": "1 failed",
                   "pass_output": "1 passed"}
-            rec = {"status": "fixed", "fix_commits": [fix + " fix: x"], "regression_evidence": ev}
-            self.assertEqual(dae_fix.evidence_errors(rec), [])
-            self.assertEqual(dae_fix.repro_order_errors(rec, repo), [])
+            rec = {"slug": "2026-10-20-x", "title": "X", "status": "fixed",
+                   "fix_commits": [fix + " fix: x"], "regression_evidence": ev}
+            order = lambda **kw: dae_fix.repro_order_errors(dict(rec, **kw), repo)  # noqa: E731
+            self.assertEqual(dae_fix.validate(rec, repo), ([], []))
             # fix landed first / repro squashed into the fix
-            self.assertIn("ancestor", dae_fix.repro_order_errors(
-                dict(rec, fix_commits=[repro], regression_evidence=dict(ev, repro_commit=fix)), repo)[0])
-            self.assertTrue(dae_fix.repro_order_errors(dict(rec, fix_commits=[repro]), repo))
-            self.assertIn("not found", dae_fix.repro_order_errors(
-                dict(rec, regression_evidence=dict(ev, repro_commit="nope")), repo)[0])
+            self.assertIn("ancestor", order(fix_commits=[repro],
+                                            regression_evidence=dict(ev, repro_commit=fix))[0])
+            self.assertIn("ancestor", order(regression_evidence=dict(ev, repro_commit=fix))[0])
+            # past fixed: order_verified must be recorded and match fix_commits[0]
+            self.assertIn(fix, order(status="refined")[0])
+            self.assertTrue(order(status="refined",
+                                  regression_evidence=dict(ev, order_verified=repro)))
+            verified = dict(ev, order_verified=fix)
+            self.assertEqual(order(status="refined", regression_evidence=verified), [])
+            # squash-merged: commits gone, recorded order_verified stands in
+            gone = ["0" * 40 + " fix: x"]
+            self.assertEqual(order(status="closed", fix_commits=gone,
+                                   regression_evidence=dict(verified, repro_commit="1" * 40)), [])
+            self.assertIn("not found", order(status="closed", fix_commits=gone)[0])
             # evidence missing / incomplete
             self.assertTrue(dae_fix.evidence_errors(dict(rec, regression_evidence=None)))
             self.assertIn("pass_output", dae_fix.evidence_errors(
                 dict(rec, regression_evidence=dict(ev, pass_output="")))[0])
             self.assertTrue(dae_fix.evidence_errors(dict(rec, fix_commits=[])))
-            # not yet fixed: nothing required
             self.assertEqual(dae_fix.evidence_errors({"status": "pinned"}), [])
+            # cutoff: new fixes error, older in-flight fixes only warn
+            bare = dict(rec, regression_evidence=None)
+            errors, warnings = dae_fix.validate(bare, repo)
+            self.assertTrue(errors and not warnings)
+            errors, warnings = dae_fix.validate(dict(bare, slug="2026-10-19-x"), repo)
+            self.assertTrue(warnings and not errors)
 
 
 if __name__ == "__main__":

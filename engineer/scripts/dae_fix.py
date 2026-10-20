@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 import dae_resolve
+from dae_handoff import REAL_RUN_CUTOFF
 
 # Closed-set vocabularies
 STATUS_LIFECYCLE = {
@@ -265,26 +266,49 @@ def _git(repo, *args):
     return subprocess.run(["git", "-C", repo] + list(args), capture_output=True, text=True)
 
 
+def _resolve(repo, ref):
+    r = _git(repo, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def repro_order_errors(rec, repo):
     """The regression repro must be committed before the fix: repro_commit is a
-    strict ancestor of fix_commits[0] (first token of the entry is the sha)."""
+    strict ancestor of fix_commits[0] (first token of the entry is the sha).
+
+    Checked on the branch while the commits resolve; once it passes, the agent
+    records regression_evidence.order_verified: <full sha of fix_commits[0]>,
+    required from refined on. After a squash merge the branch commits are gone,
+    so a recorded order_verified stands in for the git check.
+    """
     ev = rec.get("regression_evidence")
     commits = rec.get("fix_commits") or []
     if rec.get("status") not in FIXED_OR_LATER or not isinstance(ev, dict) \
             or not ev.get("repro_commit") or not commits:
         return []  # evidence_errors already reports what's missing
-    shas = []
-    for ref in (str(ev["repro_commit"]), commits[0].split()[0]):
-        r = _git(repo, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
-        if r.returncode != 0:
-            return ["commit %r not found in %s" % (ref, repo)]
-        shas.append(r.stdout.strip())
-    repro, first_fix = shas
+    verified = str(ev.get("order_verified") or "")
+    refs = (str(ev["repro_commit"]), commits[0].split()[0])
+    repro, first_fix = (_resolve(repo, r) for r in refs)
+    if not (repro and first_fix):
+        if verified:
+            return []  # ponytail: trusts the recorded check once the commits are gone
+        return ["commits %s not found in %s and no regression_evidence.order_verified recorded — "
+                "run --validate on the fix branch before it merges" % (list(refs), repo)]
     if repro == first_fix or _git(repo, "merge-base", "--is-ancestor", repro, first_fix).returncode != 0:
         return ["regression_evidence.repro_commit %s must be committed before (be an ancestor of) "
                 "fix_commits[0] %s — commit the failing repro first, then the fix"
                 % (repro[:12], first_fix[:12])]
+    if verified != first_fix and (verified or rec["status"] != "fixed"):
+        return ["commit order checked: record regression_evidence.order_verified: %s" % first_fix]
     return []
+
+
+def validate(rec, repo):
+    """Full --validate: (errors, warnings). Regression evidence + commit order are
+    errors for fixes dated on/after REAL_RUN_CUTOFF, warnings for older in-flight ones."""
+    regression = evidence_errors(rec) or repro_order_errors(rec, repo)
+    if (rec.get("slug") or "")[:10] < REAL_RUN_CUTOFF:
+        return validate_fix(rec), regression
+    return validate_fix(rec) + regression, []
 
 
 def validate_fix(rec):
@@ -340,7 +364,6 @@ def validate_fix(rec):
             )
 
     errors.extend(attempt_errors(rec))
-    errors.extend(evidence_errors(rec))
 
     # When status == 'closed', enforce close-step preconditions at schema time.
     # The mmc audit showed 5 fixes with status: closed but only 2 handoffs —
@@ -718,7 +741,9 @@ def main(argv):
 
         rec = parse_fix(text)
         repo = os.path.dirname(os.path.abspath(fix_file))
-        errors = validate_fix(rec) + repro_order_errors(rec, repo)
+        errors, warnings = validate(rec, repo)
+        for w in warnings:
+            sys.stderr.write("WARNING (in-flight, dated before %s): %s\n" % (REAL_RUN_CUTOFF, w))
         if errors:
             for err in errors:
                 sys.stderr.write("ERROR: " + err + "\n")
