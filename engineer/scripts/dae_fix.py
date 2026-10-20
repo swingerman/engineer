@@ -12,6 +12,7 @@ Usage:
 import os
 import re
 import glob
+import subprocess
 import sys
 
 import dae_resolve
@@ -63,6 +64,7 @@ def parse_fix(text):
         "followups": [],
         "handoff_path": None,
         "attempts": [],
+        "regression_evidence": None,
     }
 
     fm = dae_resolve.extract_frontmatter(text)
@@ -189,6 +191,10 @@ def parse_fix(text):
     if isinstance(attempts, list):
         rec["attempts"] = attempts
 
+    evidence = data.get("regression_evidence")
+    if isinstance(evidence, dict):
+        rec["regression_evidence"] = evidence
+
     return rec
 
 
@@ -227,6 +233,58 @@ def attempt_errors(rec):
         if a.get("result") == "fail":
             failed[gate] = failed.get(gate, 0) + 1
     return errors
+
+
+EVIDENCE_FIELDS = ("repro_commit", "command", "fail_output", "pass_output")
+FIXED_OR_LATER = {"fixed", "refined", "verified", "hardened", "gap-analyzed", "closed"}
+
+
+def evidence_errors(rec):
+    """From status: fixed on, the fix must show the regression repro failing before
+    the fix and passing after it: fix_commits non-empty and regression_evidence
+    {repro_commit, command, fail_output (run at repro_commit), pass_output (run at
+    the last fix commit)}. Commit order is checked separately (repro_order_errors).
+    """
+    if rec.get("status") not in FIXED_OR_LATER:
+        return []
+    errors = []
+    if not rec.get("fix_commits"):
+        errors.append("status: %s requires fix_commits" % rec["status"])
+    ev = rec.get("regression_evidence")
+    if not isinstance(ev, dict):
+        errors.append("status: %s requires regression_evidence %s — the repro failing at "
+                      "repro_commit and passing after the fix" % (rec["status"], list(EVIDENCE_FIELDS)))
+    else:
+        missing = [f for f in EVIDENCE_FIELDS if not ev.get(f)]
+        if missing:
+            errors.append("regression_evidence missing %s" % missing)
+    return errors
+
+
+def _git(repo, *args):
+    return subprocess.run(["git", "-C", repo] + list(args), capture_output=True, text=True)
+
+
+def repro_order_errors(rec, repo):
+    """The regression repro must be committed before the fix: repro_commit is a
+    strict ancestor of fix_commits[0] (first token of the entry is the sha)."""
+    ev = rec.get("regression_evidence")
+    commits = rec.get("fix_commits") or []
+    if rec.get("status") not in FIXED_OR_LATER or not isinstance(ev, dict) \
+            or not ev.get("repro_commit") or not commits:
+        return []  # evidence_errors already reports what's missing
+    shas = []
+    for ref in (str(ev["repro_commit"]), commits[0].split()[0]):
+        r = _git(repo, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
+        if r.returncode != 0:
+            return ["commit %r not found in %s" % (ref, repo)]
+        shas.append(r.stdout.strip())
+    repro, first_fix = shas
+    if repro == first_fix or _git(repo, "merge-base", "--is-ancestor", repro, first_fix).returncode != 0:
+        return ["regression_evidence.repro_commit %s must be committed before (be an ancestor of) "
+                "fix_commits[0] %s — commit the failing repro first, then the fix"
+                % (repro[:12], first_fix[:12])]
+    return []
 
 
 def validate_fix(rec):
@@ -282,6 +340,7 @@ def validate_fix(rec):
             )
 
     errors.extend(attempt_errors(rec))
+    errors.extend(evidence_errors(rec))
 
     # When status == 'closed', enforce close-step preconditions at schema time.
     # The mmc audit showed 5 fixes with status: closed but only 2 handoffs —
@@ -658,7 +717,8 @@ def main(argv):
             return 1
 
         rec = parse_fix(text)
-        errors = validate_fix(rec)
+        repo = os.path.dirname(os.path.abspath(fix_file))
+        errors = validate_fix(rec) + repro_order_errors(rec, repo)
         if errors:
             for err in errors:
                 sys.stderr.write("ERROR: " + err + "\n")

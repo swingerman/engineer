@@ -10,11 +10,30 @@ This is the anti-fragmentation rule made concrete: mid-stream questions re-prime
 context and fragment the work (they are the expensive kind). A choice point is
 allowed only where the human's judgment actually lives.
 
+## Two kinds of fork — sort first
+
+Before rendering any choice point, sort the fork:
+
+- **Observable** — running code, a prototype or an experiment can answer it
+  ("does X happen when Y?", "does the test pass on master?", "which version is
+  installed?", "does the API return 404 or 410?"). **Never ask.** Run it and
+  record the command and its output where the decision lands (the artifact, the
+  handoff, or the fix's `attempts:` / `regression_evidence`), then proceed on the
+  result. If running it is unsafe (prod writes, paid calls, irreversible), that
+  is a preference fork about *whether to run it*. Ask that, not the fact.
+- **Preference / judgment** — no run can settle it (scope, naming, priority,
+  risk appetite, UX taste, "is this worth it?"). Use recommend-and-redirect
+  below.
+
+Every choice point you render carries a one-line **"Not observable because …"**.
+If you can't finish that sentence, the fork is observable: go run it.
+
 ## The shape
 
 Every choice point renders as:
 
 - **Recommendation** — one option, marked **"(Recommended)"**, listed first.
+- **Not observable because …** — why no run can settle it (see above).
 - **Rationale** — the one-line projection behind it ("~1 file, well-understood
   → express (XS)").
 - **Alternatives** — the other options, so the human redirects in one move.

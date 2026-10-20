@@ -155,6 +155,9 @@ class TestValidateFix(unittest.TestCase):
             "blocks_user": True,
             "workaround": "refresh the page",
             "gap_analysis": [{"category": "architecture_violation"}],
+            "fix_commits": ["b2 fix"],
+            "regression_evidence": {"repro_commit": "a1", "command": "t",
+                                    "fail_output": "1 failed", "pass_output": "1 passed"},
         }
         errors = dae_fix.validate_fix(rec)
         self.assertEqual(errors, [])
@@ -239,6 +242,9 @@ class TestValidateFix(unittest.TestCase):
             },
             "gap_analysis": [{"category": "none"}],
             "followups": [],
+            "fix_commits": ["b2 fix"],
+            "regression_evidence": {"repro_commit": "a1", "command": "t",
+                                    "fail_output": "1 failed", "pass_output": "1 passed"},
         }
 
     def test_validate_fix_closed_happy_path(self):
@@ -942,6 +948,40 @@ class TestAttemptPremiseGate(unittest.TestCase):
         # validate_fix surfaces it
         rec = dae_fix.parse_fix(self.HEAD + self.FAIL * 3 + "---\n")
         self.assertTrue(any("premise" in e for e in dae_fix.validate_fix(rec)))
+
+
+class TestReproBeforeFix(unittest.TestCase):
+    """From status: fixed, fail-then-pass evidence is required and the repro commit
+    must be an ancestor of the first fix commit."""
+
+    def test_gate(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as repo:
+            def commit(msg):
+                subprocess.run(["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t",
+                                "commit", "-q", "--allow-empty", "-m", msg], check=True)
+                return subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                                      capture_output=True, text=True).stdout.strip()
+            subprocess.run(["git", "init", "-q", repo], check=True)
+            repro, fix = commit("repro"), commit("fix")
+            ev = {"repro_commit": repro, "command": "t", "fail_output": "1 failed",
+                  "pass_output": "1 passed"}
+            rec = {"status": "fixed", "fix_commits": [fix + " fix: x"], "regression_evidence": ev}
+            self.assertEqual(dae_fix.evidence_errors(rec), [])
+            self.assertEqual(dae_fix.repro_order_errors(rec, repo), [])
+            # fix landed first / repro squashed into the fix
+            self.assertIn("ancestor", dae_fix.repro_order_errors(
+                dict(rec, fix_commits=[repro], regression_evidence=dict(ev, repro_commit=fix)), repo)[0])
+            self.assertTrue(dae_fix.repro_order_errors(dict(rec, fix_commits=[repro]), repo))
+            self.assertIn("not found", dae_fix.repro_order_errors(
+                dict(rec, regression_evidence=dict(ev, repro_commit="nope")), repo)[0])
+            # evidence missing / incomplete
+            self.assertTrue(dae_fix.evidence_errors(dict(rec, regression_evidence=None)))
+            self.assertIn("pass_output", dae_fix.evidence_errors(
+                dict(rec, regression_evidence=dict(ev, pass_output="")))[0])
+            self.assertTrue(dae_fix.evidence_errors(dict(rec, fix_commits=[])))
+            # not yet fixed: nothing required
+            self.assertEqual(dae_fix.evidence_errors({"status": "pinned"}), [])
 
 
 if __name__ == "__main__":
