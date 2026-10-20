@@ -302,13 +302,102 @@ def repro_order_errors(rec, repo):
     return []
 
 
+# Strongest first. lint = a lint rule or a script check.
+ENFORCEMENT_LEVELS = ("architecture", "type", "lint", "test", "doc")
+STRUCTURAL_LEVELS = ENFORCEMENT_LEVELS[:3]
+RULE_ROW = re.compile(r'^\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|')
+ENFORCER = re.compile(r'^(script|type|arch|test):\s*\S')
+
+
+def read_rules(path):
+    """{rule: enforced_by} from the rules.md table, or None if the file is missing."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeDecodeError):
+        return None
+    rows = {}
+    for line in text.splitlines():
+        m = RULE_ROW.match(line.strip())
+        if m and m.group(1).lower() != "rule" and not set(m.group(1)) <= set("-: "):
+            rows[m.group(1)] = m.group(2)
+    return rows
+
+
+def prior_categories(fix_dir, slug):
+    """Gap categories recorded by the fix artifacts in fix_dir dated before slug."""
+    # ponytail: slug order breaks same-day ties alphabetically; fine for a repeat count
+    seen = set()
+    for path in glob.glob(os.path.join(fix_dir, "*.md")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                other = parse_fix(f.read())
+        except (OSError, UnicodeDecodeError):
+            continue
+        if other["slug"] and other["slug"] < slug:
+            seen.update(g.get("category") for g in other["gap_analysis"]
+                        if isinstance(g.get("category"), str))
+    return seen
+
+
+def ladder_check(rec, fix_dir):
+    """(errors, warnings) for the enforcement ladder over gap_analysis findings.
+
+    Every finding except category none names enforcement_level (strongest first:
+    architecture > type > lint > test > doc). Anything below architecture states
+    level_reason: why no stronger level works. A category that an earlier fix in
+    fix_dir already recorded is a repeat: it must land at architecture, type or
+    lint and name the rule: it adds to <fix_dir>/../rules.md, with its enforcer.
+    rules.md missing, or a rule there with no script:/type:/arch:/test: enforcer,
+    is a warning.
+    """
+    findings = [(i, g) for i, g in enumerate(rec.get("gap_analysis") or [])
+                if isinstance(g, dict) and isinstance(g.get("category"), str)
+                and g["category"] != "none"]
+    if not findings:
+        return [], []
+    rules_path = os.path.normpath(os.path.join(fix_dir, os.pardir, "rules.md"))
+    rules = read_rules(rules_path)
+    if rules is None:
+        warnings = ["%s not found: add the rules table (| Rule | Enforced by |) so each "
+                    "rule names the script, type, arch rule or test that enforces it" % rules_path]
+    else:
+        warnings = ["rules.md: rule %r has nothing enforcing it (Enforced by must start with "
+                    "script:, type:, arch: or test:), which counts as a gap" % r
+                    for r, by in rules.items() if not ENFORCER.match(by)]
+    repeats = prior_categories(fix_dir, rec.get("slug") or "")
+    errors = []
+    for i, g in findings:
+        where = "gap_analysis[%d] (%s)" % (i, g["category"])
+        level = g.get("enforcement_level")
+        if level not in ENFORCEMENT_LEVELS:
+            errors.append("%s enforcement_level must be one of %s (strongest first)"
+                          % (where, list(ENFORCEMENT_LEVELS)))
+            continue
+        if level != "architecture" and not g.get("level_reason"):
+            errors.append("%s enforcement_level %s is below architecture: state level_reason, "
+                          "why no stronger level works" % (where, level))
+        if g["category"] not in repeats:
+            continue
+        if level not in STRUCTURAL_LEVELS:
+            errors.append("%s repeats a category an earlier fix recorded: it must land at %s, "
+                          "not %s" % (where, " / ".join(STRUCTURAL_LEVELS), level))
+        elif rules is not None and not ENFORCER.match(rules.get(str(g.get("rule") or ""), "")):
+            errors.append("%s repeats a category an earlier fix recorded: set rule: to the "
+                          "rules.md row it adds, with what enforces it" % where)
+    return errors, warnings
+
+
 def validate(rec, repo):
-    """Full --validate: (errors, warnings). Regression evidence + commit order are
-    errors for fixes dated on/after REAL_RUN_CUTOFF, warnings for older in-flight ones."""
-    regression = evidence_errors(rec) or repro_order_errors(rec, repo)
+    """Full --validate: (errors, warnings). Regression evidence, commit order and the
+    enforcement ladder are errors for fixes dated on/after REAL_RUN_CUTOFF, warnings
+    for older in-flight ones. repo is the fix artifact's directory."""
+    ladder, warnings = ladder_check(rec, repo)
+    new = (evidence_errors(rec) or repro_order_errors(rec, repo)) + ladder
     if (rec.get("slug") or "")[:10] < REAL_RUN_CUTOFF:
-        return validate_fix(rec), regression
-    return validate_fix(rec) + regression, []
+        return validate_fix(rec), warnings + ["in-flight, dated before %s: %s" % (REAL_RUN_CUTOFF, e)
+                                              for e in new]
+    return validate_fix(rec) + new, warnings
 
 
 def validate_fix(rec):
@@ -743,7 +832,7 @@ def main(argv):
         repo = os.path.dirname(os.path.abspath(fix_file))
         errors, warnings = validate(rec, repo)
         for w in warnings:
-            sys.stderr.write("WARNING (in-flight, dated before %s): %s\n" % (REAL_RUN_CUTOFF, w))
+            sys.stderr.write("WARNING: %s\n" % w)
         if errors:
             for err in errors:
                 sys.stderr.write("ERROR: " + err + "\n")

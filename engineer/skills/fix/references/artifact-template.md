@@ -79,6 +79,10 @@ gap_analysis:
     phase: atdd                               # which DAE phase leaked
     finding: "Spec for session management had no scenario covering token expiry during redirect."
     followup_kind: extend_spec
+    enforcement_level: test                   # architecture | type | lint | test | doc, strongest first
+    level_reason: "Expiry timing is runtime state; no type or lint rule can see it."
+                                              # required below architecture
+    # rule: "..."                             # required on a repeat category: the .engineer/rules.md row it adds
 
 followups:
   - category: incomplete_spec
@@ -98,5 +102,5 @@ investigating → pinned-pending → pinned → fixed → refined → verified �
 ```
 
 Each status is written by the skill step that completes it (Steps 1–9).
-`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, gap_analysis category membership, that any attempt after two failures on the same gate carries a complete, unfalsified `premise:`, and — from `status: fixed` on — complete `regression_evidence` whose `repro_commit` is a strict git ancestor of `fix_commits[0]` (or, once the commits are gone after a squash merge, a recorded `order_verified`). Fixes dated before `dae_handoff.REAL_RUN_CUTOFF` get warnings instead of errors for these checks.
+`dae_fix.py --validate <file>` checks slug, title, severity, status, blocks_user, workaround, gap_analysis category membership, that every finding names an `enforcement_level` (with `level_reason` below `architecture`) and that a category already seen in an earlier fix lands at `architecture`/`type`/`lint` with a `rule:` in `.engineer/rules.md`, that any attempt after two failures on the same gate carries a complete, unfalsified `premise:`, and — from `status: fixed` on — complete `regression_evidence` whose `repro_commit` is a strict git ancestor of `fix_commits[0]` (or, once the commits are gone after a squash merge, a recorded `order_verified`). Fixes dated before `dae_handoff.REAL_RUN_CUTOFF` get warnings instead of errors for these checks.
 `dae_fix.py close_ready(rec)` enforces the close gate: pin confirmed + hardened (including bug-line gate) + gap_analysis non-empty + no unresolved blockers.
