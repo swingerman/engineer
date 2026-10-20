@@ -41,7 +41,7 @@ you may be patching over a real defect.
 
 ## The real fix (out of this repo)
 
-The gate is the *discipline layer*. The robust fix is to stop hand-maintaining
+The gate is the *discipline layer*. The lasting fix is to stop hand-maintaining
 the fixture at all — generate the test DB by applying the **canonical schema +
 migrations**, so parity holds by construction. That lives in the atdd
 `pipeline-builder` (which emits the harness), not the engineer plugin. Until a

@@ -45,6 +45,8 @@ blocks the skill. Then create one TodoWrite todo per workflow step below. See
 7. **Apply** — apply selected; install graceful paths where needed; re-run both test streams. Before running the test streams, ensure required infra is up: read `manifest.yml`'s `infra:` section, then call `${CLAUDE_PLUGIN_ROOT}/scripts/dae_infra.py ensure <names>` for each declared dependency the tests need. On a `start-failed` structured failure → stop and surface the diagnosis. On a missing manifest declaration for required infra → stop with the "declare in manifest" message. Any failure → revert that proposal and report.
 8. **Handoff** — emit a summary.
 
+**Prose pass** (before Step 8). Run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_prose.py --changed <feature-dir>` and fix every hit. Then reread the feature's changed `.md` artifacts against `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: restate each sentence as a fact, number or instruction, or delete it. Never change what an AC or spec requires, only how it is worded.
+
 If a charter rule itself blocks a genuinely better design, surface it in the handoff (→ `feature-edit` / charter amendment). refine does not amend the charter.
 
 ## Handoff

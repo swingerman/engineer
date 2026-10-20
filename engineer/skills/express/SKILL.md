@@ -42,7 +42,8 @@ Do the whole thing in one context. **No sub-agents, no inter-phase handoffs.**
    the diff is not self-evident. Prototype `in-place`: the prototype code *is* the
    start — clean it, don't rewrite.
 3. **Verify (light)** — run the deterministic gates: the acceptance test + CRAP +
-   `${CLAUDE_PLUGIN_ROOT}/scripts/dae_ontology.py` + `dae_arch`. LLM attention
+   `${CLAUDE_PLUGIN_ROOT}/scripts/dae_ontology.py` + `dae_arch` +
+   `dae_prose.py --changed <feature-dir>` (no judgment prose pass). LLM attention
    only on red. No mutation, no gauntlet, no review-panel.
 4. **Code-over-doc check** — non-code doc chars must not exceed code chars for
    this feature; if they do, surface a one-line note (inform, don't block).
@@ -71,6 +72,7 @@ tripped and pointing at `discover-acs` (CP2 onward).
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/plain-prose.md`: write every artifact this skill produces to these rules
 - `${CLAUDE_PLUGIN_ROOT}/references/express-lane.md` — the XS contract, guardrails, ratchet
 - `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md` — the `size` dial (XS = this lane)
 - `${CLAUDE_PLUGIN_ROOT}/references/choice-points.md` — the projection that sized it XS + the back-gate choice point

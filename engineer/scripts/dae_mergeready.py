@@ -3,7 +3,7 @@
 
 The deterministic bar behind `gate_profile.verify: auto` (see
 `references/gate-profile.md`). Aggregates signals the pipeline already produces —
-it adds no new checks — and is **fail-closed**: any signal it cannot
+plus the plain-prose check (`dae_prose.py`) — and is **fail-closed**: any signal it cannot
 affirmatively confirm green is a blocker → human.
 
   dae_mergeready.py <feature-dir> [--json] [--final-cp N]
@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 
+import dae_prose
 import dae_resolve
 from dae_progress import CHECKPOINTS
 
@@ -81,23 +82,32 @@ def _gauntlet_cleared(feature_dir):
     return False
 
 
-def _ci_green(root, branch):
-    """gh PR check rollup for the branch. Fail-closed: no gh / no PR / any
-    non-SUCCESS → not green."""
+def _pr_view(root, branch):
+    """(data, error) from `gh pr view` for the branch; data is None on error."""
     if not branch:
-        return False, "no branch on feature.md"
+        return None, "no branch on feature.md"
     try:
         p = subprocess.run(
-            ["gh", "pr", "view", branch, "--json", "state,statusCheckRollup"],
+            ["gh", "pr", "view", branch, "--json", "state,statusCheckRollup,body"],
             cwd=root, capture_output=True, text=True)
     except FileNotFoundError:
-        return False, "gh CLI not available"
+        return None, "gh CLI not available"
     if p.returncode != 0:
-        return False, "no open PR for branch (%s)" % (p.stderr.strip()[:80] or "gh error")
+        return None, "no open PR for branch (%s)" % (p.stderr.strip()[:80] or "gh error")
     try:
-        data = json.loads(p.stdout)
+        return json.loads(p.stdout), None
     except ValueError:
-        return False, "unparseable gh output"
+        return None, "unparseable gh output"
+
+
+def _prose_detail(hits):
+    return "; ".join("%s:%d %s" % (os.path.basename(p), n, h) for p, n, _, h in hits[:5])
+
+
+def _ci_green(data, err):
+    """gh PR check rollup. Fail-closed: no gh / no PR / any non-SUCCESS → not green."""
+    if data is None:
+        return False, err
     if data.get("state") != "OPEN":
         return False, "PR state is %s" % data.get("state")
     rollup = data.get("statusCheckRollup") or []
@@ -143,8 +153,18 @@ def gather(feature_dir, final_cp=LAST_CP):
         checks.append(("gauntlet cleared", ok,
                        "declared bar; stopped_by:clear %s" % ("found" if ok else "NOT found")))
 
+    # Plain prose (references/plain-prose.md): changed artifacts + PR body
+    hits = dae_prose.check_files(dae_prose.changed_md(feature_dir))
+    checks.append(("artifact prose clean", not hits, _prose_detail(hits) or "clean"))
+    pr, pr_err = _pr_view(root, _field(fm, "branch"))
+    if pr is None:
+        checks.append(("PR body prose clean", False, pr_err))
+    else:
+        hits = [("PR body", n, r, h) for n, r, h in dae_prose.check_text(pr.get("body") or "")]
+        checks.append(("PR body prose clean", not hits, _prose_detail(hits) or "clean"))
+
     # CI / open PR
-    ci_ok, ci_detail = _ci_green(root, _field(fm, "branch"))
+    ci_ok, ci_detail = _ci_green(pr, pr_err)
     checks.append(("CI green on open PR", ci_ok, ci_detail))
 
     return [{"name": n, "ok": bool(o), "detail": d} for n, o, d in checks]
