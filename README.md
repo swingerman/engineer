@@ -151,6 +151,7 @@ aesthetic one.
 | `dae_commit.py` | Commit with bounded retry and safe stale-lock removal |
 | `dae_roadmap.py` · `dae_tracker_local.py` | Roadmap + tracker drivers |
 | `dae_delegable.py` | Cloud-vs-local dispatch routing |
+| `dae_diverse.py` | Second-model-family review gate (L/XL or charter-flagged; never XS/S) |
 | `dae_infra.py` | Declared infrastructure probe / start / teardown |
 | `dae_introvert.py` | Flags tests that pass without asserting on output |
 | `dae_fix.py` | Bug-fix lifecycle + gap analysis |

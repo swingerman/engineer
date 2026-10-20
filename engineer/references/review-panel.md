@@ -17,7 +17,7 @@ agent had noticed.
 | Role | Model class | Posture |
 |---|---|---|
 | **adviser** | `frontier` | Constructive senior review. What is missing, underspecified, or would bite later. Explicitly *not* the advocate — say so in the brief so the two don't converge. |
-| **advocate** | `inherit` | Adversarial. Assume the author was too close to the work and that at least one confident claim is false. Find it. |
+| **advocate** | `inherit` (`diverse` on high-stakes features, below) | Adversarial. Assume the author was too close to the work and that at least one confident claim is false. Find it. |
 
 Two roles, not five. They already produce non-overlapping findings — the adviser
 finds gaps, the advocate finds *false statements*. Add a third lens only when a
@@ -40,6 +40,41 @@ it argues against a moving target and may need several tool rounds.
 
 CP2 is the cheapest place to catch a wrong AC: everything downstream is derived
 from it. CP4 is the last point before code exists.
+
+## Second model family — high-stakes features only
+
+Two reviewers from one model family agreeing is weak evidence: they share blind
+spots. So high-stakes features get one reviewer from a different family.
+
+Before dispatching the panel (and the CP7 verifier), run
+`${CLAUDE_PLUGIN_ROOT}/scripts/dae_diverse.py <feature-dir>`. Don't decide this
+by judgment. When it says `"diverse": true` (size L/XL, or `charter_flagged:
+true`; never XS/S or the express lane):
+
+- **CP2/CP4** — the **advocate** runs on `diverse` instead of `inherit`. The
+  adviser stays `frontier`. Still two agents, so no extra cost; the two
+  families now differ.
+- **CP7** — a **second verifier** runs on `diverse` alongside the normal one,
+  same brief, plus: *"You are the second-family verifier. Do not write the
+  handoff; return your findings."*
+
+Resolve `diverse` per `model-classes.md`. If no other family is reachable, run
+on `frontier` and write `diverse: unavailable — fell back to frontier` in the
+handoff. At `"diverse": false` nothing changes.
+
+### Merging the findings
+
+Tag each finding with the `family` that raised it. Match findings across
+reviewers by claim + location, then sort into three buckets:
+
+| Bucket | Goes here |
+|---|---|
+| **act** | `error` severity, or raised by **both** families |
+| **consider** | `advisory`, raised by one family |
+| **dismissed** | checked and rejected. Keeps its disposition |
+
+Within each bucket, findings raised by both families come first. Two families
+agreeing is the strongest signal the panel gives.
 
 ## Autonomy keying
 
@@ -65,8 +100,9 @@ its read set produces plausible-sounding fiction, which is worse than no review.
 description: <adviser|advocate> — <artifact> for <feature-slug>
 subagent_type: <engineer:panel-adviser | engineer:panel-advocate> (or the project
         override; see host-capabilities.md, "Role agents")
-model: <frontier for adviser, inherit for advocate — classes, not product
-        names; resolve against the Agent tool's live `model` enum>
+model: <frontier for adviser, inherit for advocate (diverse when dae_diverse.py
+        says so) — classes, not product names; resolve against the Agent
+        tool's live `model` enum>
 prompt:
   <role opener — see below>
 
@@ -157,6 +193,10 @@ panel_findings:
     disposition: "Out of scope for this feature; parked as a roadmap item."
 ```
 
+On a `diverse` run, add `family: <model family>` to each finding, plus
+`raised_by: both` when both families found it, and a `bucket:` of `act` /
+`consider` / `dismissed` (see "Merging the findings").
+
 **Rejecting a finding is fine — recording it is not optional.** An undocumented
 rejection means the next agent re-litigates the same point, which is exactly the
 cost the panel exists to avoid.
@@ -172,7 +212,9 @@ with a disposition. Silence is not addressing it.
 
 ## References
 
-- `${CLAUDE_PLUGIN_ROOT}/references/model-classes.md` — the `economy`/`inherit`/`frontier` classes and how to resolve one to an actual model
+- `${CLAUDE_PLUGIN_ROOT}/scripts/dae_diverse.py` — whether a feature gets the second-family reviewer
+
+- `${CLAUDE_PLUGIN_ROOT}/references/model-classes.md` — the `economy`/`inherit`/`frontier`/`diverse` classes and how to resolve one to an actual model
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — autonomy source; the subagent brief template
 - `${CLAUDE_PLUGIN_ROOT}/references/parallelism.md` — the two roles are a fixed 2-agent fan-out (Tier 2)
 - `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md` — where `panel_findings[]` lives

@@ -20,7 +20,8 @@ Rules:
 - Don't modify code, tests or specs. Report violations; fixing them is a
   human/agent decision made after you.
 - The only files you write are the CP7 handoff and the real-run evidence under
-  `features/<slug>/evidence/`.
+  `features/<slug>/evidence/`. If the brief says you are the second-family
+  verifier, write nothing; return findings.
 - A green test suite is not proof that the feature works. Without real-run
   evidence, CP7 is unmet.
 - Report tool output as evidence. Never write "looks fine".
