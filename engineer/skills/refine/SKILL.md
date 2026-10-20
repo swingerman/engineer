@@ -53,7 +53,7 @@ Emit per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`. `agent_id` must 
 
 The handoff MUST include the `exit_criteria` block asserting each of Checkpoint 6's exit criteria (Foundation Design Section 8) with `verified_by`, `met`, and `evidence`. For `verified_by: tool` criteria, the evidence MUST be the tool's actual output. The checkpoint is marked done only when every criterion is met.
 
-**Before stopping**, apply the dispatch rule — see `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`. CP7 verify needs a fresh agent (charter §6). Dispatch `subagent_type: engineer:verifier` (or the project override), which cannot edit code and writes the CP7 handoff. Do **not** ask the human "want me to dispatch?" — auto-dispatch at autonomy `medium`/`high`; confirm-then-dispatch at `low`. If verify needs resources you can't reach (live emulators, prod creds), write the exact dispatch command in the handoff and stop.
+**Before stopping**, apply the dispatch rule — see `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md`. CP7 verify needs a fresh agent (charter §6). Dispatch `subagent_type: engineer:verifier` (or the project override), which cannot edit code and writes the CP7 handoff. If `${CLAUDE_PLUGIN_ROOT}/scripts/dae_diverse.py <feature-dir>` says `"diverse": true`, also dispatch a second verifier on the `diverse` class and merge its findings per `${CLAUDE_PLUGIN_ROOT}/references/review-panel.md` ("Second model family"). Do **not** ask the human "want me to dispatch?" — auto-dispatch at autonomy `medium`/`high`; confirm-then-dispatch at `low`. If verify needs resources you can't reach (live emulators, prod creds), write the exact dispatch command in the handoff and stop.
 
 ## References
 
