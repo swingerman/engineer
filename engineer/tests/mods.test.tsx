@@ -30,6 +30,8 @@ test('push bypass spellings still hit the gate', async $ => {
     'git push origin HEAD:refs/heads/main',
     "git push origin 'main'",
     'git push origin $(echo main)',
+    'git push --repo=origin main',
+    'git push origin $BRANCH',
   ]) {
     const r = await $.tool.call({ tool: 'Bash', command })
     expect(said(r), command).toContain('External-write gate')

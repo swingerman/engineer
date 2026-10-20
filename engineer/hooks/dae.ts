@@ -72,13 +72,14 @@ const MERGE_FLAGS = /^(--auto|--squash|--merge|--rebase|--delete-branch|--admin|
 /**
  * Outward-facing writes in a shell command that always need a human OK.
  * `onMain` is asked (once, lazily) only for a push that names no target branch.
+ * ponytail: a best-effort net over shell text, not a wall; server-side branch protection is the wall.
  * A `PR … (current branch)` action is the only kind the verify:auto carve-out may waive;
  * one that names another PR or head, or a command we cannot read, always asks.
  */
 export async function externalWrites(command: string, onMain: () => Promise<boolean>): Promise<string[]> {
   const found: string[] = []
-  // Fail closed: substitution or eval can hide the real target from any parser.
-  if (/\b(git|gh)\b/.test(command) && /\bpush\b|\bpr\b/.test(command) && /\$\(|`|\beval\b/.test(command)) {
+  // Fail closed: expansion, substitution, eval or a git alias can hide the real target from any parser.
+  if (/\b(git|gh)\b/.test(command) && /\bpush\b|\bpr\b/.test(command) && /\$|`|\beval\b|alias\./.test(command)) {
     return ['external write in a command too dynamic to read']
   }
   let isCurrentPush = false
@@ -89,7 +90,9 @@ export async function externalWrites(command: string, onMain: () => Promise<bool
       if (args.some(a => /^(--force(-with-lease)?(=.*)?|-f|--mirror|-[a-z]*f[a-z]*)$/.test(a) || /^['"]?\+/.test(a))) {
         found.push('force-push')
       }
-      const dests = args.filter(a => !a.startsWith('-')).slice(1).map(destOf)
+      // The first positional is the remote unless --repo named it.
+      const positional = args.filter(a => !a.startsWith('-'))
+      const dests = (args.some(a => /^--repo(=|$)/.test(a)) ? positional : positional.slice(1)).map(destOf)
       if (dests.some(d => /^(main|master)$/.test(d))) found.push('push to main/master')
       else if (dests.length === 0 || dests.includes('HEAD')) isCurrentPush = true
     }
