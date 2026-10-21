@@ -115,6 +115,32 @@ class BreadcrumbTests(unittest.TestCase):
         self.assertIn("no CURRENT header", out)
 
 
+class StateTests(unittest.TestCase):
+    def test_json_state_for_the_mods(self):
+        with tempfile.TemporaryDirectory() as d:
+            feat = _write_feature(d, "015-image-formats", CURRENT + "\n" + TABLE)
+            _write_fm(feat, "autonomy_level: medium")
+            os.makedirs(os.path.join(feat, "handoffs"))
+            with open(os.path.join(feat, "handoffs", "cp2.md"), "w", encoding="utf-8") as f:
+                f.write("---\ncheckpoint: 2\nhuman_action_needed: yes\n---\n")
+            with open(os.path.join(feat, "run-graph.yml"), "w", encoding="utf-8") as f:
+                f.write("segments:\n  - name: front\n    checkpoints: [2, 3, 4]\n")
+            out = dae_progress.state(feat)
+        self.assertEqual((out["cp"], out["met"], out["total"]), (3, 2, 4))
+        self.assertEqual(out["segment"], "front")
+        self.assertEqual(out["autonomy_level"], "medium")
+        self.assertTrue(out["last_handoff"].endswith("handoffs/cp2.md"))
+        self.assertTrue(out["human_action_needed"])
+        self.assertIn("DAE ▸ 015-image-formats", out["breadcrumb"])
+
+    def test_bare_feature_degrades(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = dae_progress.state(_write_feature(d, "099-new", None))
+        self.assertIsNone(out["cp"])
+        self.assertIsNone(out["last_handoff"])
+        self.assertFalse(out["human_action_needed"])
+
+
 def _write_fm(feature_dir, body):
     """Write a feature.md with the given frontmatter body."""
     with open(os.path.join(feature_dir, "feature.md"), "w",

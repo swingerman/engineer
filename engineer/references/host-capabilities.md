@@ -48,6 +48,7 @@ fallback is a bug.
 | **peer-message** | A dispatched agent reporting back mid-run to a named parent | SendMessage | The agent's final text as its return value — which is why the reporting contract names the channel explicitly. |
 | **tool-channel** | Reaching trackers, roadmaps, issue systems | MCP servers | The driver-preflight fallback: a CLI, an API, or `type: none`. Already specified in `tracker.md` / `roadmap.md`. |
 | **render** | Publishing a rendered, shareable view — see below | Artifacts | Terminal text. Always the default. |
+| **host hooks** | Deterministic enforcement and live state: the progress sync after every handoff write, guards on what the docs already forbid, the pipeline band, the cost ledger — see below | the plugin's function-hooks module (`hooks/register.tsx`) | Each skill does the step itself, as written. The coordinator dispatches the progress sync itself when the `mcp__engineer__cost_ledger` tool is not listed. |
 
 ## Role agents — plugin default, project override
 
@@ -67,6 +68,26 @@ agent definitions stay generic.
   scaffold overrides; add one only when the charter asks for it.
 - **Limits.** Plugin agents ignore `hooks`, `mcpServers` and `permissionMode`.
   A role that needs any of those must be a project override.
+
+## `host hooks` — the engineer mods
+
+Where the host runs function hooks, the plugin's `hooks/register.tsx` loads with
+it. Every piece is an enhancement: it enforces or shows what the docs already
+say, and adds no rule.
+
+| Mod | What it does | Source of the rule |
+|---|---|---|
+| Handoff-write hook | After a Write/Edit to `features/*/handoffs/*.md`: runs `dae_handoff.py`, toasts on failure, and spawns an `economy` progress-log agent. The tool result tells the writer the sync was dispatched, so nobody dispatches it twice. | `progress-log`, `handoff-summary.md` |
+| Guards (deny) | `frontier` on a loop dispatch; a loop dispatch with no `max_rounds`; push to main/master, force-push, PR create/merge without the person's OK in a dialog (the `verify: auto` carve-out via `dae_mergeready.py` stands); the verifier role writing anything but a handoff. Each deny quotes its rule and doc. The shell checks are a net over command text, not a wall: server-side branch protection is the wall. | `model-classes.md`, `gauntlet.md`, `handoff-dispatch.md` (external-write gate), `agents/verifier.md` |
+| Pipeline band | `dae_progress.py`'s breadcrumb above the prompt for the feature last touched, redrawn on handoff writes; hidden with no feature in scope. | `progress-indicator.md` |
+| Toast + sound | When a handoff sets `human_action_needed: yes`, a gate question is asked, or a DAE agent finishes or fails. | `handoff-dispatch.md` stop rules |
+| `/dae` pane + status line | Running DAE agents (role, CP, model class, elapsed, tokens) and the `run-graph.yml` segment in progress; status line `CP5 ▸ 3/4 · 2 agents · 41k tok`. | `coordinator.md` |
+| Cost ledger | Actual tokens and time per role × model class × shape, kept across sessions; the model reads it through the `mcp__engineer__cost_ledger` tool. | `model-classes.md`, coordinator estimates |
+| Re-anchor | After a compaction, re-injects role, checkpoint, autonomy and the latest handoff path into that agent's conversation. | `reorient` |
+
+The economy and frontier aliases the mods use are plugin options
+(`economyModel`, `frontierModels`), so a model retirement is a settings change.
+Tests: `claude plugin test engineer`.
 
 ## `render` — the one worth reaching for
 

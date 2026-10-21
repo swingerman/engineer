@@ -128,10 +128,11 @@ For each segment, in order:
 5. **Record the actual result** for each node (node, agent_id, status, rounds,
    tokens and minutes when the host reports them). Write them under `actual:` in
    `run-graph.yml` once per segment, not per node.
-6. **Tracker sync** is not the coordinator's job. The engineer mods plugin's
-   handoff-write hook does it. You can tell the hook ran because `progress.md`
-   has already absorbed the new handoff. If it has not, dispatch an `economy`
-   `/engineer.progress-log <slug>` node (Tier 1, fire and forget).
+6. **Tracker sync** is not the coordinator's job when the engineer mods load:
+   their handoff-write hook dispatches it on every handoff write, in the
+   background. You can tell the mods are loaded because the
+   `mcp__engineer__cost_ledger` tool is listed. If it is not, dispatch an
+   `economy` `/engineer.progress-log <slug>` node (Tier 1, fire and forget).
 7. At a segment boundary, stop for the gate if there is one (see Segments),
    otherwise go to the next segment.
 

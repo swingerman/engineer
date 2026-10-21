@@ -1,6 +1,6 @@
 {
   "name": "engineer",
-  "version": "0.39.0",
+  "version": "0.40.0",
   "description": "Disciplined Agentic Engineering (DAE) — methodology kit for Claude Code. Skills that implement the DAE pipeline: feature intake, AC discovery, spec writing, planning, implementation, verification, hardening.",
   "author": {
     "name": "Miklos"
@@ -14,6 +14,21 @@
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/scripts/dae_lifecycle.py"
       ]
+    }
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "economyModel": {
+      "type": "string",
+      "title": "Economy model alias",
+      "description": "The model alias the economy class resolves to for the mod's own dispatches (model-classes.md). Change it when the lineup changes.",
+      "default": "sonnet"
+    },
+    "frontierModels": {
+      "type": "string",
+      "title": "Frontier model aliases",
+      "description": "Comma-separated aliases (or id fragments) that count as the frontier class for the loop guard.",
+      "default": "fable"
     }
   }
 }

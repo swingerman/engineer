@@ -24,6 +24,10 @@ checkpoint altitude:
 non-zero exit or a missing `progress.md` never stops the skill — the breadcrumb
 is orientation, not a gate. Show whatever it prints and continue.
 
+Where the engineer mods load, the same breadcrumb also sits in a band above
+the prompt and redraws on every handoff write. Print it anyway: the band is an
+enhancement, the printed breadcrumb is the contract.
+
 ### Render it on the way *out*, too
 
 Run the breadcrumb again as the **last thing the skill does**, after the
