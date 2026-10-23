@@ -62,50 +62,23 @@ export const isVerifier = (type: string): boolean => /(^|:)verifier$/.test(type)
 
 // --- external-write gate (handoff-dispatch.md) -------------------------------
 
-/** A push target as git reads it: the destination after `:`, without `+`, quotes or `refs/heads/`. */
-const destOf = (ref: string): string =>
-  ref.replace(/^['"]|['"]$/g, '').replace(/^\+/, '').split(':').pop()!.replace(/^refs\/heads\//, '')
-
 // gh pr merge flags that take no value; anything else may name another PR.
 const MERGE_FLAGS = /^(--auto|--squash|--merge|--rebase|--delete-branch|--admin|-[dsmr])$/
 
 /**
- * Outward-facing writes in a shell command that always need a human OK.
- * `onMain` is asked (once, lazily) only for a push that names no target branch.
- * ponytail: a best-effort net over shell text, not a wall; server-side branch protection is the wall.
- * A `PR … (current branch)` action is the only kind the verify:auto carve-out may waive;
- * one that names another PR or head, or a command we cannot read, always asks.
+ * The PR merges in a shell command, the one external write the hook asks about:
+ * `PR merge (current branch)` is the only kind the verify:auto carve-out may waive;
+ * one with any other argument (a PR number, `$N`) always asks.
+ * ponytail: a net over shell text, not a wall (an alias or `$GH pr merge` slips by);
+ * pushes to main and force-pushes are left to server-side branch protection.
  */
-export async function externalWrites(command: string, onMain: () => Promise<boolean>): Promise<string[]> {
-  const found: string[] = []
-  // Fail closed: expansion, substitution, eval or a git alias can hide the real target from any parser.
-  if (/\b(git|gh)\b/.test(command) && /\bpush\b|\bpr\b/.test(command) && /\$|`|\beval\b|alias\./.test(command)) {
-    return ['external write in a command too dynamic to read']
-  }
-  let isCurrentPush = false
-  for (const part of command.split(/&&|\|\||;|\||\n/)) {
-    const push = /\bgit\s+(?:-[Cc]\s+\S+\s+|--?[\w-]+(?:=\S+)?\s+)*push\b(.*)$/.exec(part)
-    if (push) {
-      const args = (push[1] ?? '').trim().split(/\s+/).filter(Boolean)
-      if (args.some(a => /^(--force(-with-lease)?(=.*)?|-f|--mirror|-[a-z]*f[a-z]*)$/.test(a) || /^['"]?\+/.test(a))) {
-        found.push('force-push')
-      }
-      // The first positional is the remote unless --repo named it.
-      const positional = args.filter(a => !a.startsWith('-'))
-      const dests = (args.some(a => /^--repo(=|$)/.test(a)) ? positional : positional.slice(1)).map(destOf)
-      if (dests.some(d => /^(main|master)$/.test(d))) found.push('push to main/master')
-      else if (dests.length === 0 || dests.includes('HEAD')) isCurrentPush = true
-    }
-    const pr = /\bgh\s+pr\s+(create|merge)\b(.*)$/.exec(part)
-    if (pr) {
-      const args = (pr[2] ?? '').trim().split(/\s+/).filter(Boolean)
-      const isCurrent = pr[1] === 'merge' ? args.every(a => MERGE_FLAGS.test(a)) : !args.some(a => /^(-H|--head)(=|$)/.test(a))
-      found.push(`PR ${pr[1]}${isCurrent ? ' (current branch)' : ''}`)
-    }
-  }
-  if (isCurrentPush && !found.includes('push to main/master') && (await onMain())) found.push('push to main/master')
-  return found
-}
+export const prMerges = (command: string): string[] =>
+  command.split(/&&|\|\||;|\||\n/).flatMap(part => {
+    const m = /\bgh\s+pr\s+merge\b(.*)$/.exec(part)
+    if (!m) return []
+    const isCurrent = m[1].trim().split(/\s+/).filter(Boolean).every(a => MERGE_FLAGS.test(a))
+    return [`PR merge${isCurrent ? ' (current branch)' : ''}`]
+  })
 
 export const EXTERNAL_RULE =
   'handoff-dispatch.md, "External-write gate": pushing to main/master, force-pushing, and creating or ' +

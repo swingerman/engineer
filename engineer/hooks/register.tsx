@@ -7,8 +7,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { EngineerAgent, EngineerFeature } from '../types'
 import {
-  dispatchDeny, EXTERNAL_RULE, externalWrites, featureScope, isDae, isVerifier, kTok, modelClass,
-  parseBrief, slugOf, VERIFIER_RULE,
+  dispatchDeny, EXTERNAL_RULE, featureScope, isDae, isVerifier, kTok, modelClass,
+  parseBrief, prMerges, slugOf, VERIFIER_RULE,
 } from './dae'
 
 type $ = EngineInterface
@@ -215,17 +215,12 @@ export const register: Register = (on, options) => {
   // command. A hook's ask is the person's alone: no classifier or rule settles it,
   // and where nobody can be asked it is a deny carrying this reason.
   on('tool.check', { tool: 'Bash' }, async ($, e, next) => {
-    const actions = await externalWrites((e.input as { command: string }).command, () =>
-      // A bare push goes to @{push}, `push <remote> HEAD` to the branch's own name: gate on either.
-      Promise.all(['@{push}', 'HEAD'].map(ref =>
-        $.process.run(['git', 'rev-parse', '--abbrev-ref', ref])
-          .then(r => r.exitCode === 0 && /(^|\/)(main|master)$/.test(r.stdout.trim()), () => false)))
-        .then(hits => hits.some(Boolean)))
+    const actions = prMerges((e.input as { command: string }).command)
     if (actions.length === 0) return next(e)
-    // The one carve-out: verify:auto may open and merge its own PR when the bar is green.
+    // The one carve-out: verify:auto may merge its own PR when the bar is green.
     if (actions.every(a => a.endsWith('(current branch)')) && (await mergeReady($))) return next(e)
     return { decision: 'ask', reason: `DAE: ${actions.join(' + ')} needs an explicit OK. ${EXTERNAL_RULE}` }
-  }).catch(() => ({ decision: 'deny', reason: `DAE: the external-write guard failed. ${EXTERNAL_RULE}` }))
+  }).catch(() => ({ decision: 'deny', reason: `DAE: the PR-merge guard failed. ${EXTERNAL_RULE}` }))
 
   on('tool.call', { tool: ['Write', 'Edit', 'NotebookEdit'] }, async ($, e, next) => {
     if (e.agentId === undefined) return next(e)

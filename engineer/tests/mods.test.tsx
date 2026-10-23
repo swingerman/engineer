@@ -10,34 +10,26 @@ const STATE = JSON.stringify({
 
 // --- 2. hard guards: one deny each -------------------------------------------
 
-// The external-write gate is a permission ask, put to the person by the host's own prompt.
+// The PR-merge gate is a permission ask, put to the person by the host's own prompt.
 const gate = ($: Engine, command: string) => $.tool.check({ tool: 'Bash', input: { command } })
 
-test('external writes ask for an explicit OK, naming the action', async $ => {
-  for (const [command, what] of [
-    ['git push --force origin feat', 'force-push'],
-    ['git push origin main', 'push to main/master'],
-    ['gh pr create --fill', 'PR create'], // no verify:auto carve-out in scope
-    // bypass spellings
-    ['git push origin HEAD:refs/heads/main', 'External-write gate'],
-    ["git push origin 'main'", 'External-write gate'],
-    ['git push origin $(echo main)', 'External-write gate'],
-    ['git push --repo=origin main', 'External-write gate'],
-    ['git push origin $BRANCH', 'External-write gate'],
-  ]) {
+test('a PR merge asks for an explicit OK (no verify:auto carve-out in scope)', async $ => {
+  for (const command of ['gh pr merge --squash', 'gh pr merge 42', 'git fetch && gh pr merge $N --admin']) {
     const r = await gate($, command)
     expect(r.decision, command).toBe('ask')
-    expect(r.reason, command).toContain(what)
+    expect(r.reason, command).toContain('PR merge')
   }
 })
 
-test('nobody to ask: a gated call is refused, not run', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
+test('nobody to ask: a PR merge is refused, not run', async $ => {
+  const r = await $.tool.call({ tool: 'Bash', command: 'gh pr merge --squash' })
   expect(r.isError).toBe(true)
 })
 
-test('an ordinary feature-branch push is not gated', async $ => {
-  expect((await gate($, 'git push -u origin feat')).decision).not.toBe('ask')
+test('pushes, PR create and reads are not gated', async $ => {
+  for (const command of ['git push origin main', 'git push --force origin feat', 'gh pr create --fill', 'gh pr view "$N"']) {
+    expect((await gate($, command)).decision, command).not.toBe('ask')
+  }
 })
 
 test('frontier-class model on a loop dispatch is denied', async $ => {

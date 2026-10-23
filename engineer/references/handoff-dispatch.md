@@ -81,9 +81,10 @@ automatically; for an external/self write, ask first with the specific action
 named. (This is why the auto-mode safety classifier kept blocking these — the
 skill should ask proactively instead of relying on the net.)
 
-Where the engineer mods load, a hook enforces this list for shell pushes and
-`gh pr create|merge`: it puts the call to the person as a permission prompt (no rule
-or classifier settles it) and denies without a yes or with nobody to ask.
+Where the engineer mods load, a hook nets one of these, `gh pr merge`: it puts
+the call to the person as a permission prompt (no rule or classifier settles it)
+and denies without a yes or with nobody to ask. Pushes to main and force-pushes
+are left to server-side branch protection.
 Ask anyway; the hook is the net, not the plan.
 
 **The one carve-out — `verify: auto` merge.** A feature whose
