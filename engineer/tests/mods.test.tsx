@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock, test, type Engine } from 'claude-code/testing'
 
 const said = (r: unknown) => JSON.stringify(r)
 
@@ -10,38 +10,34 @@ const STATE = JSON.stringify({
 
 // --- 2. hard guards: one deny each -------------------------------------------
 
-test('force-push is denied without an explicit OK', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push --force origin feat' })
-  expect(said(r)).toContain('External-write gate')
-})
+// The external-write gate is a permission ask, put to the person by the host's own prompt.
+const gate = ($: Engine, command: string) => $.tool.check({ tool: 'Bash', input: { command } })
 
-test('push to main is denied without an explicit OK', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
-  expect(said(r)).toContain('push to main/master')
-})
-
-test('PR create is denied without an explicit OK (no verify:auto carve-out in scope)', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'gh pr create --fill' })
-  expect(said(r)).toContain('PR create')
-})
-
-test('push bypass spellings still hit the gate', async $ => {
-  for (const command of [
-    'git push origin HEAD:refs/heads/main',
-    "git push origin 'main'",
-    'git push origin $(echo main)',
-    'git push --repo=origin main',
-    'git push origin $BRANCH',
+test('external writes ask for an explicit OK, naming the action', async $ => {
+  for (const [command, what] of [
+    ['git push --force origin feat', 'force-push'],
+    ['git push origin main', 'push to main/master'],
+    ['gh pr create --fill', 'PR create'], // no verify:auto carve-out in scope
+    // bypass spellings
+    ['git push origin HEAD:refs/heads/main', 'External-write gate'],
+    ["git push origin 'main'", 'External-write gate'],
+    ['git push origin $(echo main)', 'External-write gate'],
+    ['git push --repo=origin main', 'External-write gate'],
+    ['git push origin $BRANCH', 'External-write gate'],
   ]) {
-    const r = await $.tool.call({ tool: 'Bash', command })
-    expect(said(r), command).toContain('External-write gate')
+    const r = await gate($, command)
+    expect(r.decision, command).toBe('ask')
+    expect(r.reason, command).toContain(what)
   }
 })
 
-test('an ordinary feature-branch push passes', async ($, on) => {
-  on('tool.call', { tool: 'Bash' }, () => ({ result: { stdout: 'ok', stderr: '', interrupted: false } }))
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push -u origin feat' })
-  expect(said(r)).not.toContain('External-write gate')
+test('nobody to ask: a gated call is refused, not run', async $ => {
+  const r = await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
+  expect(r.isError).toBe(true)
+})
+
+test('an ordinary feature-branch push is not gated', async $ => {
+  expect((await gate($, 'git push -u origin feat')).decision).not.toBe('ask')
 })
 
 test('frontier-class model on a loop dispatch is denied', async $ => {

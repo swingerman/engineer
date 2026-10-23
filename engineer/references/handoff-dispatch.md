@@ -82,7 +82,8 @@ named. (This is why the auto-mode safety classifier kept blocking these — the
 skill should ask proactively instead of relying on the net.)
 
 Where the engineer mods load, a hook enforces this list for shell pushes and
-`gh pr create|merge`: it asks the person in a dialog and denies without a yes.
+`gh pr create|merge`: it puts the call to the person as a permission prompt (no rule
+or classifier settles it) and denies without a yes or with nobody to ask.
 Ask anyway; the hook is the net, not the plan.
 
 **The one carve-out — `verify: auto` merge.** A feature whose

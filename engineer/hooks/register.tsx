@@ -211,8 +211,11 @@ export const register: Register = (on, options) => {
 
   // --- 2. hard guards ---------------------------------------------------------
 
-  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    const actions = await externalWrites(e.command, () =>
+  // A permission decision, so the host shows its own one-click Allow/Deny with the
+  // command. A hook's ask is the person's alone: no classifier or rule settles it,
+  // and where nobody can be asked it is a deny carrying this reason.
+  on('tool.check', { tool: 'Bash' }, async ($, e, next) => {
+    const actions = await externalWrites((e.input as { command: string }).command, () =>
       // A bare push goes to @{push}, `push <remote> HEAD` to the branch's own name: gate on either.
       Promise.all(['@{push}', 'HEAD'].map(ref =>
         $.process.run(['git', 'rev-parse', '--abbrev-ref', ref])
@@ -221,12 +224,8 @@ export const register: Register = (on, options) => {
     if (actions.length === 0) return next(e)
     // The one carve-out: verify:auto may open and merge its own PR when the bar is green.
     if (actions.every(a => a.endsWith('(current branch)')) && (await mergeReady($))) return next(e)
-    const what = actions.join(' + ')
-    const answer = await $.ui
-      .ask(`${e.command.slice(0, 200)}\n\nDAE external-write gate (${what}). Allow it?`, ['Allow once', 'Deny'])
-      .catch(() => undefined)
-    return answer === 'Allow once' ? next(e) : { deny: `DAE: ${what} without an explicit OK. ${EXTERNAL_RULE}` }
-  }).catch(($, e, next) => (next.called ? next(e) : { deny: `DAE: the external-write guard failed. ${EXTERNAL_RULE}` }))
+    return { decision: 'ask', reason: `DAE: ${actions.join(' + ')} needs an explicit OK. ${EXTERNAL_RULE}` }
+  }).catch(() => ({ decision: 'deny', reason: `DAE: the external-write guard failed. ${EXTERNAL_RULE}` }))
 
   on('tool.call', { tool: ['Write', 'Edit', 'NotebookEdit'] }, async ($, e, next) => {
     if (e.agentId === undefined) return next(e)
