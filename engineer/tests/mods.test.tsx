@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock, test, type Engine } from 'claude-code/testing'
 
 const said = (r: unknown) => JSON.stringify(r)
 
@@ -10,38 +10,26 @@ const STATE = JSON.stringify({
 
 // --- 2. hard guards: one deny each -------------------------------------------
 
-test('force-push is denied without an explicit OK', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push --force origin feat' })
-  expect(said(r)).toContain('External-write gate')
-})
+// The PR-merge gate is a permission ask, put to the person by the host's own prompt.
+const gate = ($: Engine, command: string) => $.tool.check({ tool: 'Bash', input: { command } })
 
-test('push to main is denied without an explicit OK', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push origin main' })
-  expect(said(r)).toContain('push to main/master')
-})
-
-test('PR create is denied without an explicit OK (no verify:auto carve-out in scope)', async $ => {
-  const r = await $.tool.call({ tool: 'Bash', command: 'gh pr create --fill' })
-  expect(said(r)).toContain('PR create')
-})
-
-test('push bypass spellings still hit the gate', async $ => {
-  for (const command of [
-    'git push origin HEAD:refs/heads/main',
-    "git push origin 'main'",
-    'git push origin $(echo main)',
-    'git push --repo=origin main',
-    'git push origin $BRANCH',
-  ]) {
-    const r = await $.tool.call({ tool: 'Bash', command })
-    expect(said(r), command).toContain('External-write gate')
+test('a PR merge asks for an explicit OK (no verify:auto carve-out in scope)', async $ => {
+  for (const command of ['gh pr merge --squash', 'gh pr merge 42', 'git fetch && gh pr merge $N --admin']) {
+    const r = await gate($, command)
+    expect(r.decision, command).toBe('ask')
+    expect(r.reason, command).toContain('PR merge')
   }
 })
 
-test('an ordinary feature-branch push passes', async ($, on) => {
-  on('tool.call', { tool: 'Bash' }, () => ({ result: { stdout: 'ok', stderr: '', interrupted: false } }))
-  const r = await $.tool.call({ tool: 'Bash', command: 'git push -u origin feat' })
-  expect(said(r)).not.toContain('External-write gate')
+test('nobody to ask: a PR merge is refused, not run', async $ => {
+  const r = await $.tool.call({ tool: 'Bash', command: 'gh pr merge --squash' })
+  expect(r.isError).toBe(true)
+})
+
+test('pushes, PR create and reads are not gated', async $ => {
+  for (const command of ['git push origin main', 'git push --force origin feat', 'gh pr create --fill', 'gh pr view "$N"']) {
+    expect((await gate($, command)).decision, command).not.toBe('ask')
+  }
 })
 
 test('frontier-class model on a loop dispatch is denied', async $ => {
