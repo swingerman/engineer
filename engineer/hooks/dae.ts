@@ -81,8 +81,8 @@ export const prMerges = (command: string): string[] =>
   })
 
 export const EXTERNAL_RULE =
-  'handoff-dispatch.md, "External-write gate": pushing to main/master, force-pushing, and creating or ' +
-  'merging a PR need explicit human authorization every time, regardless of autonomy.'
+  'handoff-dispatch.md, "External-write gate": merging a PR needs explicit human authorization every ' +
+  'time, regardless of autonomy.'
 
 export const VERIFIER_RULE =
   'agents/verifier.md: the verifier must not modify code, tests or specs; the only file it writes is ' +

@@ -70,8 +70,7 @@ Effective autonomy = `feature.md` `autonomy_level`, capped by `manifest.autonomy
 **outward-facing or self-modifying writes**. These require **explicit human
 authorization every time, regardless of autonomy** — even at `high`:
 
-- pushing to a protected/default branch (`main`/`master`), or force-pushing;
-- creating/merging a PR, or posting a PR/issue comment;
+- merging a PR, or posting a PR/issue comment;
 - self-modifying agent config (`.claude/settings.json`, hooks, this manifest);
 - any write to a live external system (prod, tracker rows a human owns, deploys).
 
@@ -83,9 +82,11 @@ skill should ask proactively instead of relying on the net.)
 
 Where the engineer mods load, a hook nets one of these, `gh pr merge`: it puts
 the call to the person as a permission prompt (no rule or classifier settles it)
-and denies without a yes or with nobody to ask. Pushes to main and force-pushes
-are left to server-side branch protection.
-Ask anyway; the hook is the net, not the plan.
+and denies without a yes or with nobody to ask. Ask anyway; the hook is the
+net, not the plan.
+
+Pushing (to main, or by force) and opening a PR need no ask: branch protection
+guards `main`, and a PR is cheap to close.
 
 **The one carve-out — `verify: auto` merge.** A feature whose
 `gate_profile.verify` is `auto` may **auto-merge its own PR without asking** —
@@ -94,9 +95,8 @@ returns `ready: true` (fail-closed) and no guardrail forces human (opt-in,
 `autonomy_level` not `low`, no uncovered qualitative surface, no charter-flagged
 path, default `validation_method` — see `${CLAUDE_PLUGIN_ROOT}/references/gate-profile.md`).
 It posts the readiness bar as the PR comment. This is the **sole** exception to
-"creating/merging a PR always asks"; every other item above — pushing to
-main, force-push, self-modifying config, deploys, other external writes — still
-always asks, even under `verify: auto`.
+"merging a PR always asks"; every other item above — comments, self-modifying
+config, deploys, other external writes — still always asks, even under `verify: auto`.
 
 ## Channel — cloud-first, local fallback
 

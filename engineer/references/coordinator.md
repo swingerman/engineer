@@ -248,7 +248,7 @@ fits. Add these lines to Constraints:
 1. **A human gate**: front or back, per the Segments table.
 2. **`autonomy_level: low`**: confirm before each dispatch, plus the
    per-checkpoint gates.
-3. **The external-write gate**: push, PR, merge, comment.
+3. **The external-write gate**: merge, comment.
 4. **A node's handoff sets `human_action_needed: yes`** mid-segment: a loop cap,
    an unaddressed `error` panel finding, or a spec that looks wrong.
 5. **Failure that a re-shape cannot fix** (below).
