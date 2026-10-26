@@ -227,5 +227,73 @@ class AuditIncludesCyclesTests(unittest.TestCase):
         self.assertIn("b.py", v[3])
 
 
+def _git(cwd, *args):
+    import subprocess
+    subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
+
+
+def _repo(path):
+    os.makedirs(path, exist_ok=True)
+    _git(path, "init", "-q", "-b", "main")
+    _git(path, "config", "user.email", "t@t.t")
+    _git(path, "config", "user.name", "T")
+
+
+class NestedRepoTests(unittest.TestCase):
+    """A manifest `repos:` entry that is its own git repo (e.g. `android/`, gitignored by the
+    methodology repo) is audited too, with paths reported relative to the methodology root."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root)
+        _repo(self.root)
+        _write(self.root, ".gitignore", "/android/\n")
+        _write(self.root, ".engineer/manifest.yml",
+               "project: p\n"
+               "repos:\n"
+               "  - name: android\n"
+               "    path: android\n"
+               "    default_branch: main\n"
+               "architecture:\n"
+               "  file_size:\n"
+               "    max_lines: 2\n"
+               "  forbidden_patterns:\n"
+               "    - pattern: \"^import android \"\n"
+               "      paths: [\"android/**/pure/**\"]\n")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "init")
+        self.android = os.path.join(self.root, "android")
+        _repo(self.android)
+        _write(self.android, "app/Ok.kt", "class Ok\n")
+        _git(self.android, "add", "-A")
+        _git(self.android, "commit", "-qm", "base")
+        _git(self.android, "checkout", "-qb", "feature")
+
+    def test_jvm_sources_are_in_scope(self):
+        for ext in (".java", ".kt", ".swift"):
+            self.assertTrue(("X" + ext).endswith(da.SOURCE_EXTENSIONS), ext)
+
+    def test_full_audit_reports_nested_repo_files_with_their_prefix(self):
+        _write(self.android, "app/Big.kt", "a\nb\nc\n")
+        _git(self.android, "add", "-A")
+        _git(self.android, "commit", "-qm", "big")
+        _, _, v = da.audit(self.root, full=True)
+        self.assertIn(("android/app/Big.kt", 3, "file_size", "3 lines > max 2"), v)
+
+    def test_diff_audit_scopes_nested_repo_to_its_branch_changes(self):
+        _write(self.android, "app/pure/P.kt", "import android view\n")
+        _git(self.android, "add", "-A")
+        _git(self.android, "commit", "-qm", "pure")
+        _, _, v = da.audit(self.root, full=False)
+        files = sorted({x[0] for x in v})
+        self.assertEqual(files, ["android/app/pure/P.kt"])   # Ok.kt is unchanged vs main
+        self.assertEqual(v[0][2], "forbidden_patterns")
+
+    def test_repo_entry_that_is_not_its_own_git_repo_is_ignored(self):
+        shutil.rmtree(os.path.join(self.android, ".git"))
+        _, _, v = da.audit(self.root, full=True)
+        self.assertFalse([x for x in v if x[0].startswith("android/")])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
