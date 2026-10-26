@@ -289,6 +289,11 @@ class NestedRepoTests(unittest.TestCase):
         self.assertEqual(files, ["android/app/pure/P.kt"])   # Ok.kt is unchanged vs main
         self.assertEqual(v[0][2], "forbidden_patterns")
 
+    def test_option_like_default_branch_is_not_passed_as_an_option(self):
+        names = da.files_in_scope(self.android, full=False, base="--output=/tmp/pwned")
+        self.assertFalse(os.path.exists("/tmp/pwned"))
+        self.assertEqual(names, ["app/Ok.kt"])   # unresolvable base -> full listing, no option parsed
+
     def test_repo_entry_that_is_not_its_own_git_repo_is_ignored(self):
         shutil.rmtree(os.path.join(self.android, ".git"))
         _, _, v = da.audit(self.root, full=True)

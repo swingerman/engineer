@@ -72,10 +72,14 @@ def _match_any(path, compiled_globs):
     return any(g.match(path) for g in compiled_globs)
 
 
+# Nested repos carry their own .git/config; never let it run commands (fsmonitor, hooks).
+_SAFE_GIT = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null")
+
+
 def _git(root, *args):
     """Run a git command in `root`; return stdout text ('' on failure)."""
     try:
-        out = subprocess.run(["git", "-C", root, *args],
+        out = subprocess.run(["git", *_SAFE_GIT, "-C", root, *args],
                              capture_output=True, text=True, check=True)
         return out.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -94,8 +98,11 @@ def files_in_scope(root, full, base=None):
     else:
         base = base or (_git(root, "rev-parse", "--abbrev-ref",
                              "origin/HEAD").strip() or "origin/main")
+        # Resolve to a SHA first so a ref can never be read as an option.
+        sha = _git(root, "rev-parse", "--verify", "-q", "--end-of-options",
+                   base + "^{commit}").strip()
         names = _git(root, "diff", "--name-only", "--diff-filter=d",
-                     "--merge-base", base).splitlines()
+                     "--merge-base", sha, "--").splitlines() if sha else []
         if not names:
             names = _git(root, "ls-files").splitlines()  # no diff -> full
     return [n for n in names if n.endswith(SOURCE_EXTENSIONS)]
@@ -116,7 +123,8 @@ def _nested_repos(root, manifest):
         base = None
         if branch and branch != "none":
             remote = "origin/" + branch
-            base = remote if _git(here, "rev-parse", "--verify", "-q", remote).strip() else branch
+            base = remote if _git(here, "rev-parse", "--verify", "-q", "--end-of-options",
+                                  remote).strip() else branch
         out.append((path, base))
     return out
 
