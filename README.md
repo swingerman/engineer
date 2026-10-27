@@ -231,7 +231,7 @@ pipeline and on the roadmap.
 
 | Plugin | Purpose | Version |
 |---|---|---|
-| **[`engineer`](engineer/)** | The DAE methodology kit — 25 skills, 6 role agents, 26 guardrail scripts, the checkpoint pipeline, host mods | 0.40.1 |
+| **[`engineer`](engineer/)** | The DAE methodology kit — 25 skills, 6 role agents, 26 guardrail scripts, the checkpoint pipeline, host mods | 0.40.2 |
 | **[`atdd`](./)** | ATDD workflow, team orchestration, differential mutation testing, portable Gherkin pipeline | 0.8.4 |
 | **[`crap-analyzer`](crap-analyzer/)** | Change Risk Anti-Pattern analysis on changed code | 0.1.1 |
 

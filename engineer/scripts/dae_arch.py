@@ -11,6 +11,12 @@ Usage:
   dae_arch.py --full [START_DIR]     check every tracked file
   dae_arch.py --format json [...]    machine-readable output
 
+Nested repos: every manifest `repos:` entry whose `path` is its own git repo
+(e.g. `android/`, usually gitignored by the methodology repo) is checked too —
+its changed files are diffed against `origin/<default_branch>` (or the local
+`<default_branch>`), and reported as `<path>/<file>` so rule globs written from
+the methodology root (`android/**`, `**/src/test/**`) apply unchanged.
+
 Exit codes:
     0  no violations
     1  violations found
@@ -25,7 +31,8 @@ import sys
 
 import dae_resolve
 
-SOURCE_EXTENSIONS = (".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")
+SOURCE_EXTENSIONS = (".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+                     ".java", ".kt", ".kts", ".swift", ".go", ".rb", ".rs", ".php", ".cs")
 
 
 def _glob_to_regex(pattern):
@@ -65,32 +72,69 @@ def _match_any(path, compiled_globs):
     return any(g.match(path) for g in compiled_globs)
 
 
+# Nested repos carry their own .git/config; never let it run commands (fsmonitor, hooks).
+_SAFE_GIT = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null")
+
+
 def _git(root, *args):
     """Run a git command in `root`; return stdout text ('' on failure)."""
     try:
-        out = subprocess.run(["git", "-C", root, *args],
+        out = subprocess.run(["git", *_SAFE_GIT, "-C", root, *args],
                              capture_output=True, text=True, check=True)
         return out.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
 
-def files_in_scope(root, full):
+def files_in_scope(root, full, base=None):
     """Repo-relative source file paths to check.
 
-    full=False -> files changed vs. the base branch's merge-base; full=True ->
-    every tracked file. Only SOURCE_EXTENSIONS are returned.
+    full=False -> files changed vs. the base branch's merge-base (`base`, else
+    origin/HEAD, else origin/main); full=True -> every tracked file. Only
+    SOURCE_EXTENSIONS are returned.
     """
     if full:
         names = _git(root, "ls-files").splitlines()
     else:
-        base = (_git(root, "rev-parse", "--abbrev-ref",
-                     "origin/HEAD").strip() or "origin/main")
-        names = _git(root, "diff", "--name-only", "--merge-base",
-                     base).splitlines()
+        base = base or (_git(root, "rev-parse", "--abbrev-ref",
+                             "origin/HEAD").strip() or "origin/main")
+        # Resolve to a SHA first so a ref can never be read as an option.
+        sha = _git(root, "rev-parse", "--verify", "-q", "--end-of-options",
+                   base + "^{commit}").strip()
+        names = _git(root, "diff", "--name-only", "--diff-filter=d",
+                     "--merge-base", sha, "--").splitlines() if sha else []
         if not names:
             names = _git(root, "ls-files").splitlines()  # no diff -> full
     return [n for n in names if n.endswith(SOURCE_EXTENSIONS)]
+
+
+def _nested_repos(root, manifest):
+    """(path, base) for each `repos:` entry that is its own git repo under `root`."""
+    out = []
+    top = os.path.realpath(root)
+    for repo in (manifest or {}).get("repos") or []:
+        path = (repo.get("path") or "").strip("/")
+        here = os.path.realpath(os.path.join(root, path)) if path else top
+        if not path or here == top or not os.path.isdir(here):
+            continue
+        if os.path.realpath(_git(here, "rev-parse", "--show-toplevel").strip() or "/") != here:
+            continue  # a plain folder of the methodology repo, already covered
+        branch = repo.get("default_branch")
+        base = None
+        if branch and branch != "none":
+            remote = "origin/" + branch
+            base = remote if _git(here, "rev-parse", "--verify", "-q", "--end-of-options",
+                                  remote).strip() else branch
+        out.append((path, base))
+    return out
+
+
+def nested_files_in_scope(root, manifest, full):
+    """Source files of nested repos, as methodology-root-relative paths."""
+    files = []
+    for path, base in _nested_repos(root, manifest):
+        files += [path + "/" + f for f in files_in_scope(os.path.join(root, path), full, base)]
+    return files
 
 
 def _read_lines(root, rel):
@@ -307,7 +351,7 @@ def audit(start_dir, full):
     if not rules:
         return result["methodology_root"], None, None
     root = result["methodology_root"]
-    files = files_in_scope(root, full)
+    files = files_in_scope(root, full) + nested_files_in_scope(root, result["manifest"], full)
     return root, rules, audit_rules(root, files, rules)
 
 
