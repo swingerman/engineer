@@ -34,15 +34,27 @@ The branch-hygiene skill that runs **immediately** after a PR merges — not def
 
 4. **Prune stale remote refs.** `git fetch origin --prune`. Removes pointers to remote branches that no longer exist (e.g. when the GitHub "delete branch on merge" setting removed the remote).
 
-5. **Reconcile local state, then the tracker.** Flip the *local* `feature.md` status FIRST — otherwise `progress-log` (which derives the tracker record from local truth) and `next`/`reorient` (which read `feature.md status`) keep seeing `in-progress`. Run:
+5. **Backstop reconcile (read-only).** Features shipped via the ship commit
+   (`dae_ship.py`, written by harden / express before the PR) already carry
+   `status: done` on main, so **post-merge writes nothing tracked on main** and
+   leaves `git status` clean. Run
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/dae_reconcile.py <merged-feature-dir> --apply
+   ${CLAUDE_PLUGIN_ROOT}/scripts/dae_reconcile.py <merged-feature-dir>
    ```
-   It sets `feature.md status: done` when the PR is merged (detected via `gh`, so **squash-merge and `git.manual` are covered** — the git-ancestry check in Step 2 is not) and returns `flag: merged-unverified` when no CP7 verify handoff exists. **If flagged, surface it prominently** — the feature shipped with its ACs unverified; that is a discipline gap, not a clean close. Then dispatch `/engineer.progress-log` to propagate the done state to `progress.md` + the tracker (records `merged_at`). Per `${CLAUDE_PLUGIN_ROOT}/references/handoff-dispatch.md` — auto at `medium`/`high`, surface-and-ask at `low`.
+   read-only. `needs_reconcile: false` = done, nothing to do. Only for legacy,
+   onboarded and `git.manual` features that never got a ship commit
+   (`needs_reconcile: true`) re-run with `--apply`, and commit that flip via a
+   PR (these are the only cases that still need a commit on main). A
+   `flag: merged-unverified` is surfaced prominently: the refusal at ship time
+   should have prevented it, so it means a ship-less merge.
 
-5b. **Feature map.** If the merged feature added a user-facing surface and the `verify-<app>` skill (`manifest.verify_app`) has no row for it, add the row (feature → how to reach it → what working looks like) per `${CLAUDE_PLUGIN_ROOT}/references/verify-app-skill.md`. Committing it follows the Autonomy dispatch below. Feature maps fall behind when a missing row goes unnoticed, so don't skip this.
+5b. **External tracker sync only.** If a tracker is configured, push the merge
+   (it may record `merged_at` there; never in tracked files). No file writes.
 
-6. **Close the session log.** A merged feature is the clearest session boundary there is — the work shipped and the next session starts somewhere else. Auto-invoke `/engineer.session-summary` at autonomy `medium`/`high`; confirm-then-invoke at `low`. This is the human-readable "how do I pick this up" record; without it the only trace of the session is machine handoffs. Skip if a session-summary entry for today already exists on this feature.
+6. **Session log.** The session-summary entry lives in the ship commit when
+   `session-log.md` is in the repo. Auto-invoke `/engineer.session-summary`
+   post-merge only if the log is outside the repo, or the feature had no ship
+   commit; the entry then goes external-only, never a new commit on main.
 
 7. **Handoff.** Emit a summary per `${CLAUDE_PLUGIN_ROOT}/references/handoff-summary.md`. `checkpoint: null`; `artifacts: []`; `human_action_needed: no`. The handoff records: the merged branch name, the PR URL (if known), and the new HEAD commit. `recommended_next` points at `/engineer.next` if the feature is shipped, or the relevant fix/session continuation otherwise.
 
@@ -50,8 +62,8 @@ The branch-hygiene skill that runs **immediately** after a PR merges — not def
 
 | Level | Behavior |
 |---|---|
-| `high` | Run all seven steps. Report a one-line summary. |
-| `medium` | Run all seven steps. Report what changed (one short paragraph). |
+| `high` | Run all steps. Report a one-line summary. |
+| `medium` | Run all steps. Report what changed (one short paragraph). |
 | `low` | Surface the planned commands and the merge-state evidence; wait for confirmation before running. |
 
 ## When NOT to use this skill

@@ -23,8 +23,17 @@ When the foundations say "the agentic summary contract handles propagation," thi
 3. **Update `progress.md`** — per handoff: update the Checkpoints table row (if `checkpoint:` set), append to Verification reports (if a verification skill), append to the Handoff log, recompute the **CURRENT header** — the fixed, parseable first line of `progress.md`: `> ▶ CP<N> <Stage> — <m>/<n> criteria met | NEXT: <action> | BLOCKED: <none|reason>`. Derive `<m>/<n>` from the latest handoff's `exit_criteria` block for the current checkpoint, `NEXT` from its `recommended_next`, and `BLOCKED` from any unmet criterion that needs a human (else `none`). If the handoff carries a `cloud_session_url` and its PR isn't merged yet, set `NEXT: review cloud PR <url>` and record the session/PR link in the Handoff log — this is the signal `next` reads to surface the feature as DISPATCHED.
 4. **Recompute tracked state** — derive the `TrackedFeature` record from local truth (`feature.md` + `progress.md`).
 5. **Sync the tracker** — driver `upsert(TrackedFeature)` per `references/tracker.md`: local-wins on DAE-managed fields, tracker-managed fields (comments, labels) preserved. `local` = no-op (the feature files are the tracker). Write the result to `progress.md`'s "Tracker sync" line.
-5b. **Sync the roadmap (if the feature came from one)** — if `feature.md` carries a `roadmap_ref`, keep the strategic item's lifecycle in step with the feature: on `status: in-progress` ensure the item is `in-progress` with the feature's slug back-linked; on `status: done` (CP8 complete / PR merged) mark it `shipped`. Driver per `references/roadmap.md` (`local` = `${CLAUDE_PLUGIN_ROOT}/scripts/dae_roadmap.py mark <roadmap_ref> <status> <slug>`; MCP/CLI/API-backed = the connected channel). If `manifest.roadmap.type` is `none` or the host is unreachable, skip with a one-line note — never block the tracker sync. Note the result on `progress.md`'s "Tracker sync" line.
+5b. **Sync the roadmap (if the feature came from one)** — if `feature.md` carries a `roadmap_ref`, keep the strategic item's lifecycle in step with the feature: on `status: in-progress` ensure the item is `in-progress` with the feature's slug back-linked; on `status: done` (written in the ship commit, before merge) mark it `shipped`. Driver per `references/roadmap.md` (`local` = `${CLAUDE_PLUGIN_ROOT}/scripts/dae_roadmap.py mark <roadmap_ref> <status> <slug>`; MCP/CLI/API-backed = the connected channel). If `manifest.roadmap.type` is `none` or the host is unreachable, skip with a one-line note — never block the tracker sync. Note the result on `progress.md`'s "Tracker sync" line.
 6. **(`--project` only) Merged-PR reconcile + drift report** — first, for each in-flight feature run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_reconcile.py <feature-dir> --apply`: it flips `feature.md status: done` for any feature whose PR is merged (detected via `gh`, so **squash-merge and `git.manual` are covered**) so the tracker sync below reflects git reality instead of stale `in-progress`. A returned `flag: merged-unverified` (shipped with no CP7 verify handoff) is a discipline gap — surface it, don't bury it. Then run driver `reconcile()` per `references/tracker.md`; surface anything unexpected (orphan tracker entry, untracked local feature).
+
+## Ship commit vs. post-merge
+
+progress-log writes `progress.md` (and the roadmap `shipped` mark) on the feature
+branch inside the ship commit (`dae_ship.py`, from harden / express), not after
+merge. Post-merge invokes it for the external tracker only (`merged_at` lives
+there, never in tracked files). In `--project` mode, `dae_reconcile.py --apply`
+(step 6) is the backstop for ship-less features only; a feature already `done` is
+a no-op.
 
 ## Handoff exemption
 

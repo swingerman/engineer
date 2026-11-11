@@ -126,6 +126,8 @@ After the PR merges:
   git checkout main && git pull --ff-only && git branch -d <branch>
 ```
 
+Fix needs no post-merge write on main: the fix artifact, the `progress.md` closure entry and `status: closed` are all committed on the fix branch before the PR (Step 9). Nothing here moves.
+
 This is informational — the close step happens before merge, so cleanup can't run here. `next` and `session-summary` both probe for merged branches and will offer the cleanup automatically.
 
 ## When NOT to use this skill

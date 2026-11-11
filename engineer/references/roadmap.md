@@ -171,8 +171,10 @@ chosen, `onboard` branches on what it discovers:
   write `roadmap_ref: <id>` into `feature.md`, and `mark <id> in-progress
   <slug>` back on the roadmap (no duplicate item — reuse it, exactly like
   *Tracker-as-intake*).
-- **Ship** — when a feature reaches `done` (CP8 / merge), `progress-log` marks
-  its roadmap item `shipped`.
+- **Ship** — the ship commit (`dae_ship.py`, last commit on the feature branch,
+  written by harden / express) marks the roadmap item `shipped`
+  (`dae_roadmap.py mark <ref> shipped`), so it reaches main with the merge.
+  Post-merge writes no roadmap change.
 - **Keep alive** — when `discuss` parks an idea or scope decomposes into several
   features, offer to record them as roadmap items so the strategic layer stays
   current beyond onboard-time.
