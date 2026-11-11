@@ -64,6 +64,8 @@ Read, read-only, in this order:
 Also run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_handoff.py <feature-dir>` — report any
 checkpoint marked done without a complete handoff as a discipline gap.
 
+**Done + unmerged.** A feature on its branch with `feature.md status: done` and no merged PR has its ship commit but isn't shipped. Show it as "awaiting merge" (next action: review/merge the PR), never as shipped.
+
 Also run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_reconcile.py <feature-dir>` (read-only):
 if it reports `needs_reconcile: true`, this feature's PR is already merged (`gh`-detected —
 covers squash-merge and `git.manual`) and the local state is stale. Do **not** re-anchor on

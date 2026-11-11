@@ -13,6 +13,12 @@ check (`git merge-base --is-ancestor`) misses:
   - git.manual   — the merge happened outside the DAE flow; gh still knows.
 Git ancestry is the fallback when `gh` is unavailable.
 
+BACKSTOP ONLY. Features that went through the ship commit (dae_ship.py) already
+carry `status: done` on main when the PR merges, so reconcile is a no-op for
+them (`needs_reconcile: false`; post-merge runs it read-only to report). `--apply`
+is for legacy, onboarded and git.manual features that never got a ship commit;
+those are the only cases that still need a commit on main.
+
 Reconcile writes ONLY `feature.md` status (the authoritative field). It does NOT
 touch progress.md — that stays `progress-log`'s job (own the file, recompute the
 CURRENT header). A merge with no verification handoff (CP7 not done) is FLAGGED

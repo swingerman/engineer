@@ -11,7 +11,7 @@ Write the per-session entry in a feature's `session-log.md` so the human can clo
 
 At the end of a work session on a feature. Three boundaries reach it without the human remembering to:
 
-- **The feature merged** — `post-merge` Step 6 auto-invokes it at autonomy `medium`/`high`.
+- **The feature is ready to ship** — the entry goes into the ship commit (harden / express) so it merges with the feature; `post-merge` Step 6 only covers a log kept outside the repo, or a feature with no ship commit.
 - **The context is about to compact** — an optional `PreCompact` hook; see `${CLAUDE_PLUGIN_ROOT}/examples/pre-compact-session-summary.md`. This is the boundary where the pickup record matters most, because everything else about the session is about to be summarized away.
 - **The human stops** — an optional `Stop` hook.
 

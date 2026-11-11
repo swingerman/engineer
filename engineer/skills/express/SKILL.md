@@ -52,7 +52,12 @@ Do the whole thing in one context. **No sub-agents, no inter-phase handoffs.**
    **promote to full S/M**: write the missing `acs.md`/`spec.md`/`plan.md`, hand
    to `discover-acs`/`plan`, **keep the tracker row and branch**. Never downgrade
    silently.
-6. **Land** — open the PR; update the tracker row via the driver
+6. **Ship commit, then land** — before the PR, run
+   `${CLAUDE_PLUGIN_ROOT}/scripts/dae_ship.py <feature-dir> --lane express`
+   and commit its writes (`feature.md status: done`, `progress.md`, roadmap
+   `shipped`) plus any verify-app feature-map row and in-repo session-summary
+   entry as the branch's last commit (`ship: <slug>`). Main then shows `done`
+   exactly when the PR merges. Open the PR; update the tracker row via the driver
    (`references/tracker.md`). Back gate is `verify: light` — present it as a
    choice point (`${CLAUDE_PLUGIN_ROOT}/references/choice-points.md`): recommend
    merge on green gates, `autonomy_level`-dialed. Honor the external-write gate

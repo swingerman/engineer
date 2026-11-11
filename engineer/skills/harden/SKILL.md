@@ -105,6 +105,20 @@ create one TodoWrite todo per step. See
    - arch-check clean
 
    `recommended_next`: "open PR / `/engineer.progress-log`".
+8. **Ship commit** (feature mode, once the exit criteria above pass). Make the
+   done state the branch's LAST commit before the PR opens, so `status: done`
+   reaches main exactly when the PR merges (a PR closed unmerged leaves main
+   untouched). Run `${CLAUDE_PLUGIN_ROOT}/scripts/dae_ship.py <feature-dir>`; it
+   refuses without complete CP7 and CP8 handoffs (the merged-unverified check now
+   happens here, not after merge) and writes `feature.md status: done`,
+   `progress.md` (CP8 row done + CURRENT header "awaiting merge"; run
+   `/engineer.progress-log` for the rest of the handoff-derived rows) and the
+   local roadmap `shipped` mark. Also stage the verify-app feature-map row
+   (`references/verify-app-skill.md`, if the feature added a user-facing
+   surface) and the session-summary entry if `session-log.md` is in the repo.
+   Commit them together as `ship: <slug>`. Never write `merged_at` here (unknown
+   before merge; the external tracker sync adds it). Review follow-up commits
+   after this one are fine; do not squash it away or revert it in a rebase.
 
 ## harden_results shape
 
